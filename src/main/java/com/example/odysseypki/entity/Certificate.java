@@ -37,4 +37,14 @@ public class Certificate {
             return false;
         }
     }
+
+    @Override
+    public String toString() {
+        return "Certificate{" +
+                "issuer='" + issuer + '\'' +
+                ", subject='" + subject + '\'' +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
+                '}';
+    }
 }
