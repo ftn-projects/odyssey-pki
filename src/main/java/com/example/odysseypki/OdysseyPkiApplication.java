@@ -1,5 +1,7 @@
 package com.example.odysseypki;
 
+import com.example.odysseypki.certificatetree.CertificateNode;
+import com.example.odysseypki.certificatetree.CertificateTree;
 import com.example.odysseypki.certificate.CertificateGenerator;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.entity.Issuer;
@@ -20,6 +22,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 @SpringBootApplication
 public class OdysseyPkiApplication {
@@ -27,7 +30,21 @@ public class OdysseyPkiApplication {
 	public static final String CERT_KEYSTORE = "src/main/resources/static/certs.jks";
 
 	public static void main(String[] args) {
+		String filepath = "src/main/resources/static/certificates.dat";
 		var context = SpringApplication.run(OdysseyPkiApplication.class, args);
+		//For testing, delete after testing is done -Arezinko
+		CertificateTree tree = new CertificateTree(new CertificateNode("root"));
+		tree.generateDummyCertificates(10);
+		System.out.println("=========\nOLD TREE\n=========");
+		tree.printTree();
+		tree.serialize(filepath);
+
+		//CertificateNode node = tree.findByAlias("Certificate2");
+
+		List<String> removedAliases = tree.removeCertificate("Certificate2");
+		System.out.println("=========\nNEW TREE\n=========");
+		tree.printTree();
+		System.out.println("Removed Aliases: " + removedAliases);
 		// demo(context);
 	}
 
