@@ -1,6 +1,5 @@
-package com.example.odysseypki.CertificateTree;
+package com.example.odysseypki.certificatetree;
 
-import com.example.odysseypki.entity.Certificate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +15,11 @@ public class CertificateNode implements Serializable {
         private String alias;
         private List<CertificateNode> children;
         private CertificateNode parent;
+
+        public CertificateNode(String alias) {
+            this.alias = alias;
+            this.children = new ArrayList<>();
+        }
 
         public CertificateNode(String alias, CertificateNode parent) {
             this.alias = alias;
