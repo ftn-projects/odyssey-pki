@@ -4,8 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -17,4 +20,21 @@ public class Certificate {
     private Date startDate;
     private Date endDate;
     private X509Certificate x509Certificate;
+
+    public enum Extension {
+        DigitalSignature,
+        IntermediateCA,
+        EndEntity,
+        Https
+    }
+
+    public boolean isValid() {
+        try {
+            x509Certificate.checkValidity();
+            x509Certificate.getCriticalExtensionOIDs();
+            return true;
+        } catch (CertificateNotYetValidException | CertificateExpiredException e) {
+            return false;
+        }
+    }
 }

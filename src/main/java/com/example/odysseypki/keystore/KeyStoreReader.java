@@ -1,4 +1,4 @@
-package com.example.odysseypki.keystores;
+package com.example.odysseypki.keystore;
 
 import com.example.odysseypki.entity.Issuer;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;

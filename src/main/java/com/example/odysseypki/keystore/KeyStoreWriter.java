@@ -1,4 +1,4 @@
-package com.example.odysseypki.keystores;
+package com.example.odysseypki.keystore;
 
 import org.springframework.stereotype.Component;
 
