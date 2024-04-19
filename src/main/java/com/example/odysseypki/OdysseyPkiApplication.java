@@ -11,6 +11,7 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,6 +31,11 @@ public class OdysseyPkiApplication {
 
 	public static void main(String[] args) {
 		var context = SpringApplication.run(OdysseyPkiApplication.class, args);
+
+		// demo(context);
+	}
+
+	public static void demo(ApplicationContext context) {
 		var keyStoreReader = (KeyStoreReader) context.getBean("keyStoreReader");
 		var keyStoreWriter = (KeyStoreWriter) context.getBean("keyStoreWriter");
 		var secret = ((OdysseyPkiProperties) context.getBean("odysseyPkiProperties")).getSecret();
@@ -39,13 +45,15 @@ public class OdysseyPkiApplication {
 		System.out.println("Root certificate:");
 		System.out.println(rootCert.getX509Certificate());
 
-//		POKRENUTI ZA GENERISANJE FAJLA
+//		KEYSTORE CREATION REFERENCE (dodatno ne moramo)
 //		try {
 //			createKeyStore(CERT_KEYSTORE, secret);
 //		} catch (KeyStoreException | CertificateException | IOException | NoSuchAlgorithmException e) {
 //			e.printStackTrace();
 //			return;
 //		}
+
+		// KEYSTORE REFERENCE
 
 		keyStoreWriter.loadKeyStore(CERT_KEYSTORE, secret.toCharArray());
 		keyStoreWriter.write("root", rootCert.getIssuer().getPrivateKey(), secret.toCharArray(), rootCert.getX509Certificate());
@@ -63,7 +71,10 @@ public class OdysseyPkiApplication {
 		try (FileOutputStream fos = new FileOutputStream(filepath)) {
 			keyStore.store(fos, secret.toCharArray());
 		}
+
 	}
+
+	// SERVICE METHODS
 
 	public static Certificate generateRoot() {
 		Issuer issuer = generateIssuer("root", "", "0");
