@@ -38,6 +38,10 @@ public class Certificate {
         }
     }
 
+    public String getAlias() {
+        return x509Certificate.getSerialNumber().toString();
+    }
+
     @Override
     public String toString() {
         return "Certificate{" +

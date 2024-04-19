@@ -138,23 +138,17 @@ public class CertificateTree implements Serializable {
         }
     }
 
-    public void serialize(String fileName) {
+    public void serialize(String fileName) throws IOException {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
             oos.writeObject(this);
-            System.out.println("Certificate tree serialized successfully.");
-        } catch (IOException e) {
-            System.err.println("Error while serializing certificate tree: " + e.getMessage());
         }
     }
 
-    public static CertificateTree deserialize(String fileName) {
+    public static CertificateTree deserialize(String fileName) throws IOException, ClassNotFoundException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fileName))) {
             CertificateTree tree = (CertificateTree) ois.readObject();
             System.out.println("Certificate tree deserialized successfully.");
             return tree;
-        } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Error while deserializing certificate tree: " + e.getMessage());
-            return null;
         }
     }
 }
