@@ -28,37 +28,30 @@ public class CertificateGenerator {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public static X509Certificate generateCertificate(X500Name subject, PublicKey subjectPublicKey,
-                                                       X500Name issuer, PrivateKey issuerPrivateKey,
-                                                       Date startDate, Date endDate, String serialNumber) {
+    public static X509Certificate generateCertificate(Subject subject, Issuer issuer, Date startDate, Date endDate, String serialNumber) {
         try {
-            var signerBuilder = new JcaContentSignerBuilder("SHA256WithRSAEncryption");
-            signerBuilder.setProvider("BC");
+            var builder = new JcaContentSignerBuilder("SHA256WithRSAEncryption");
+            builder = builder.setProvider("BC");
 
-            var contentSigner = signerBuilder.build(issuerPrivateKey);
-            var certBuilder = new JcaX509v3CertificateBuilder(
-                    issuer, new BigInteger(serialNumber), startDate, endDate, subject, subjectPublicKey
-            );
+            var contentSigner = builder.build(issuer.getPrivateKey());
+            var certGen = new JcaX509v3CertificateBuilder(issuer.getX500Name(),
+                    new BigInteger(serialNumber),
+                    startDate,
+                    endDate,
+                    subject.getX500Name(),
+                    subject.getPublicKey());
 
             // TODO EXTENSIONS
-//            // Adding Basic Constraints to indicate this is not a CA certificate
-//            certBuilder.addExtension(org.bouncycastle.asn1.x509.Extension.basicConstraints, true,
-//                    new org.bouncycastle.asn1.x509.BasicConstraints(false));
-//            // Adding Key Usage extension
-//            certBuilder.addExtension(org.bouncycastle.asn1.x509.Extension.keyUsage, true,
-//                    new org.bouncycastle.asn1.x509.KeyUsage(org.bouncycastle.asn1.x509.KeyUsage.digitalSignature |
-//                            org.bouncycastle.asn1.x509.KeyUsage.keyEncipherment));
-//            // Adding Authority Key Identifier
-//            certBuilder.addExtension(org.bouncycastle.asn1.x509.Extension.authorityKeyIdentifier, false,
-//                    new org.bouncycastle.asn1.x509.AuthorityKeyIdentifier(issuer.getEncoded()));
 
-            var certHolder = certBuilder.build(contentSigner);
-            var certConverter = new JcaX509CertificateConverter();
-            certConverter.setProvider("BC");
+            var certHolder = certGen.build(contentSigner);
+
+            JcaX509CertificateConverter certConverter = new JcaX509CertificateConverter();
+            certConverter = certConverter.setProvider("BC");
+
             return certConverter.getCertificate(certHolder);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | IllegalStateException | OperatorCreationException | CertificateException e) {
             e.printStackTrace();
-            return null;
         }
+        return null;
     }
 }

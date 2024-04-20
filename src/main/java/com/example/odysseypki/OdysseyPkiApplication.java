@@ -96,10 +96,8 @@ public class OdysseyPkiApplication {
 		Date endDate = new Date(2033, Calendar.APRIL, 15);
 
 		X509Certificate certificate = CertificateGenerator.generateCertificate(
-				subject.getX500Name(),
-				subject.getPublicKey(),
-				issuer.getX500Name(),
-				issuer.getPrivateKey(),
+				subject,
+				issuer,
 				startDate,
 				endDate,
 				"1");
