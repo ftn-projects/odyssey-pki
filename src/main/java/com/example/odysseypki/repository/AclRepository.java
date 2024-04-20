@@ -9,13 +9,16 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
 @Component
 public class AclRepository {
-    public static final String KS_ACL = "src/main/resources/static/ks.acl";
-    public static final String PK_ACL = "src/main/resources/static/pk.acl";
+    public static final String KEYSTORE = "src/main/resources/static/acl/keystore.acl";
+    public static final String PRIVATE_KEY = "src/main/resources/static/acl/private-key.acl";
 
     @Autowired
     private OdysseyPkiProperties properties;
@@ -24,7 +27,7 @@ public class AclRepository {
         var encryptedPassword = AesEncryption.encrypt(password, properties.getSecret());
         var encryptedId = AesEncryption.encrypt(id, properties.getSecret());
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filepath, true))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filepath), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             writer.write(encryptedId + "\n");
             writer.write(encryptedPassword + "\n");
         }
@@ -33,7 +36,7 @@ public class AclRepository {
     public String load(String id, String filepath) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         var encryptedId = AesEncryption.encrypt(id, properties.getSecret());
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
+        try (var reader = Files.newBufferedReader(Paths.get(filepath))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.equals(encryptedId)) {

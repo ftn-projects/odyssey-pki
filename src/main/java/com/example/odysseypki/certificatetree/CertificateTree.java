@@ -52,6 +52,10 @@ public class CertificateTree implements Serializable {
         addCertificates(parentAlias, newAlias, root);
     }
 
+    public static CertificateTree createTree(String rootAlias) {
+        return new CertificateTree(new CertificateNode(rootAlias));
+    }
+
     public List<String> removeCertificate(String toBeRemoved){
         if (root == null) {
             return null;
@@ -99,21 +103,6 @@ public class CertificateTree implements Serializable {
         return deletedCertificates;
     }
 
-    public void generateDummyCertificates(int count) {
-        ArrayList<String> aliases = new ArrayList<>();
-        aliases.add("root");
-
-        for (int i = 0; i < count; i++) {
-            Random random = new Random();
-            int parentIndex = random.nextInt(aliases.size());
-            String parentAlias = aliases.get(parentIndex);
-
-            String newAlias = "Certificate" + (i + 1);
-            addCertificate(parentAlias, newAlias);
-            aliases.add(newAlias);
-        }
-    }
-
     public void printTree() {
         if (root == null) {
             System.out.println("Certificate tree is empty.");
@@ -139,7 +128,8 @@ public class CertificateTree implements Serializable {
     }
 
     public void serialize(String fileName) throws IOException {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
+        File file = new File(fileName);
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
             oos.writeObject(this);
         }
     }

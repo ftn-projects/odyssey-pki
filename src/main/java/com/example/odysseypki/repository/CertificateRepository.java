@@ -6,33 +6,44 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 @Component
 public class CertificateRepository {
-    private static final String CERT_KS_PATH = "src/main/resources/static/cert.jks";
-    private static final String ALIAS_TREE_PATH = "src/main/resources/static/alias.dat";
+    private static final String KEYSTORE_PATH = "src/main/resources/static/keystore/certificate.jks";
+    private static final String ALIAS_TREE_PATH = "src/main/resources/static/alias-tree.dat";
 
     @Autowired
     private KeyStoreRepository keyStoreRepository;
 
-    public void save(String parentAlias, Certificate certificate) throws IOException, ClassNotFoundException {
+    public void save(String parentAlias, Certificate certificate) throws IOException, ClassNotFoundException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 
-        keyStoreRepository.save(certificate, CERT_KS_PATH);
+        keyStoreRepository.save(certificate, KEYSTORE_PATH);
         tree.addCertificate(parentAlias, certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
     }
 
+    public void saveRoot(Certificate certificate) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
+        keyStoreRepository.createKeyStore(KEYSTORE_PATH);
+        keyStoreRepository.save(certificate, KEYSTORE_PATH);
+
+        var tree = CertificateTree.createTree(certificate.getAlias());
+        tree.serialize(ALIAS_TREE_PATH);
+    }
+
     public X509Certificate load(String alias) {
-        return keyStoreRepository.load(alias, CERT_KS_PATH);
+        return keyStoreRepository.load(alias, KEYSTORE_PATH);
     }
 
     public void delete(String alias) throws IOException, ClassNotFoundException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 
-        // TODO keyStoreRepository.delete(alias);
-        tree.removeCertificate(alias);
+        var aliasesForDeletion = tree.removeCertificate(alias);
+        aliasesForDeletion.forEach(a -> keyStoreRepository.delete(a, KEYSTORE_PATH));
         tree.serialize(ALIAS_TREE_PATH);
     }
 }

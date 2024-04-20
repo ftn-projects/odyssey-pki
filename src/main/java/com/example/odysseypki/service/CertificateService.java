@@ -19,10 +19,11 @@ import javax.crypto.NoSuchPaddingException;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.*;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 
 @Component
@@ -33,26 +34,49 @@ public class CertificateService {
     private CertificateRepository certificateRepository;
 
     public Certificate add(String parentAlias, String commonName, String email, String uid, Date startDate, Date endDate) throws IllegalBlockSizeException,
-            NoSuchPaddingException, IOException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, ClassNotFoundException {
+            NoSuchPaddingException, IOException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, ClassNotFoundException, CertificateException, KeyStoreException {
         KeyPair keyPairSubject = generateKeyPair();
         if (keyPairSubject == null) return null;
         Subject subject = new Subject(keyPairSubject.getPublic(), getX500Name(commonName, email, uid));
 
         var parent = certificateRepository.load(parentAlias);
-        Issuer issuer = new Issuer(getPrivateKey(aclRepository.load(parentAlias, AclRepository.PK_ACL)), parent.getPublicKey(), new X500Name(parent.getIssuerX500Principal().getName()));
+        var privateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEY);
+        if (privateKey == null) return null;
+
+        Issuer issuer = new Issuer(getPrivateKey(privateKey), parent.getPublicKey(), new X500Name(parent.getIssuerX500Principal().getName()));
 
         var serialNumber = BigInteger.valueOf(System.currentTimeMillis()).toString();
         var x509certificate =  CertificateGenerator.generateCertificate(subject, issuer, startDate, endDate, serialNumber);
         var certificate = new Certificate(subject, issuer,serialNumber, startDate, endDate, x509certificate);
 
-        aclRepository.save(certificate.getAlias(), Arrays.toString(keyPairSubject.getPrivate().getEncoded()), AclRepository.PK_ACL);
+        aclRepository.save(certificate.getAlias(), getPrivateKey(keyPairSubject.getPrivate()), AclRepository.PRIVATE_KEY);
         certificateRepository.save(parentAlias, certificate);
         return certificate;
     }
+
+    public Certificate generateRoot() throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException, CertificateException, KeyStoreException {
+        var keyPair = generateKeyPair();
+        if (keyPair == null) return null;
+
+        var subjectName = getX500Name("root", null, "0");
+        var subject = new Subject(keyPair.getPublic(), subjectName);
+        var issuer = new Issuer(keyPair.getPrivate(), keyPair.getPublic(), subjectName);
+
+        var startDate = new Date(2024, Calendar.JANUARY, 1);
+        var endDate = new Date(2034, Calendar.JANUARY, 1);
+
+        var x509certificate = CertificateGenerator.generateCertificate(subject, issuer, startDate, endDate, "0");
+        var certificate = new Certificate(subject, issuer, "0", startDate, endDate, x509certificate);
+
+        aclRepository.save(certificate.getAlias(), getPrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEY);
+        certificateRepository.saveRoot(certificate);
+        return certificate;
+    }
+
     public void delete(String alias) throws IOException, ClassNotFoundException {
         certificateRepository.delete(alias);
     }
-    public X509Certificate get(String alias){
+    public X509Certificate get(String alias) {
         return certificateRepository.load(alias);
     }
     public void getAll(){}
@@ -71,9 +95,12 @@ public class CertificateService {
 
     public static X500Name getX500Name(String commonName, String email, String uid) {
         X500NameBuilder builder = new X500NameBuilder(BCStyle.INSTANCE);
-        builder.addRDN(BCStyle.CN, commonName);
-        builder.addRDN(BCStyle.E, email);
-        builder.addRDN(BCStyle.UID, uid);
+        if (commonName != null)
+            builder.addRDN(BCStyle.CN, commonName);
+        if (email != null)
+            builder.addRDN(BCStyle.E, email);
+        if (uid != null)
+            builder.addRDN(BCStyle.UID, uid);
         return builder.build();
     }
 
@@ -84,4 +111,7 @@ public class CertificateService {
         return kf.generatePrivate(keySpec);
     }
 
+    public static String getPrivateKey(PrivateKey privateKey) {
+        return java.util.Base64.getEncoder().encodeToString(privateKey.getEncoded());
+    }
 }

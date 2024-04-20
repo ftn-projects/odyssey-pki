@@ -24,9 +24,7 @@ public class KeyStoreWriter {
 
     public void loadKeyStore(String fileName, char[] password) {
         try {
-            if(fileName != null)
-                keyStore.load(new FileInputStream(fileName), password);
-            else keyStore.load(null, password);
+            keyStore.load(new FileInputStream(fileName), password);
         } catch (NoSuchAlgorithmException | CertificateException | IOException e) {
             e.printStackTrace();
         }
@@ -43,6 +41,14 @@ public class KeyStoreWriter {
     public void write(String alias, PrivateKey privateKey, char[] password, Certificate certificate) {
         try {
             keyStore.setKeyEntry(alias, privateKey, password, new Certificate[] {certificate});
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void delete(String alias) {
+        try {
+            keyStore.deleteEntry(alias);
         } catch (KeyStoreException e) {
             e.printStackTrace();
         }
