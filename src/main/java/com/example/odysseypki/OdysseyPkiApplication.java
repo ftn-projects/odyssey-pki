@@ -1,7 +1,5 @@
 package com.example.odysseypki;
 
-import com.example.odysseypki.certificatetree.CertificateNode;
-import com.example.odysseypki.certificatetree.CertificateTree;
 import com.example.odysseypki.certificate.CertificateGenerator;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.entity.Issuer;
@@ -22,7 +20,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 
 @SpringBootApplication
 public class OdysseyPkiApplication {
@@ -98,8 +95,14 @@ public class OdysseyPkiApplication {
 		Date startDate = new Date(2023, Calendar.APRIL, 15);
 		Date endDate = new Date(2033, Calendar.APRIL, 15);
 
-		X509Certificate certificate = CertificateGenerator.generateCertificate(subject,
-				issuer, startDate, endDate, "1");
+		X509Certificate certificate = CertificateGenerator.generateCertificate(
+				subject.getX500Name(),
+				subject.getPublicKey(),
+				issuer.getX500Name(),
+				issuer.getPrivateKey(),
+				startDate,
+				endDate,
+				"1");
 
 		return new Certificate(subject, issuer, "1", startDate, endDate, certificate);
 	}
