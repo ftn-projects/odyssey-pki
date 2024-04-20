@@ -1,16 +1,21 @@
 package com.example.odysseypki;
 
+import org.modelmapper.ModelMapper;
 import com.example.odysseypki.service.CertificateService;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 
 import java.security.Security;
 
 @SpringBootApplication
 public class OdysseyPkiApplication {
-
+	@Bean
+	public ModelMapper getModelMapper() {
+		return new ModelMapper();
+	}
 	public static final String CERT_KEYSTORE = "src/main/resources/static/certs.jks";
 
 	public static void main(String[] args) {
