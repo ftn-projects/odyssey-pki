@@ -118,18 +118,11 @@ public class CertificateTree implements Serializable {
     }
 
     private void printNode(CertificateNode node, int depth) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < depth; i++) {
-            sb.append("\t");
-        }
-        sb.append("|-- ");
-        sb.append(node.getAlias());
-        System.out.println(sb.toString());
+        String sb = "\t".repeat(Math.max(0, depth)) + "|-- " + node.getAlias();
+        System.out.println(sb);
 
-        for (CertificateNode child : node.getChildren()) {
-
+        for (CertificateNode child : node.getChildren())
             printNode(child, depth + 1);
-        }
     }
 
     public void serialize(String fileName) throws IOException {
@@ -141,9 +134,7 @@ public class CertificateTree implements Serializable {
 
     public static CertificateTree deserialize(String fileName) throws IOException, ClassNotFoundException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fileName))) {
-            CertificateTree tree = (CertificateTree) ois.readObject();
-            System.out.println("Certificate tree deserialized successfully.");
-            return tree;
+            return (CertificateTree) ois.readObject();
         }
     }
 }

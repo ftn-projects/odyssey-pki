@@ -2,8 +2,6 @@ package com.example.odysseypki.service;
 
 import com.example.odysseypki.certificate.CertificateBuilder;
 import com.example.odysseypki.entity.Certificate;
-import com.example.odysseypki.entity.Issuer;
-import com.example.odysseypki.entity.Subject;
 import com.example.odysseypki.repository.AclRepository;
 import com.example.odysseypki.repository.CertificateRepository;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -14,14 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
-import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class CertificateService {
@@ -30,7 +27,7 @@ public class CertificateService {
     @Autowired
     private CertificateRepository certificateRepository;
 
-    public Certificate add(String parentAlias, String commonName, String email, String uid, Date startDate, Date endDate) throws GeneralSecurityException,
+    public Certificate create(String parentAlias, String commonName, String email, String uid, Date startDate, Date endDate) throws GeneralSecurityException,
             IOException, OperatorCreationException, ClassNotFoundException {
         var keyPair = generateKeyPair();
         if (keyPair == null) return null;
@@ -75,11 +72,15 @@ public class CertificateService {
         return certificateRepository.find(alias);
     }
 
-    public void findAll() {
-        certificateRepository.findAll();
+    public List<X509Certificate> findAll() {
+        return certificateRepository.findAll();
     }
 
-    public static KeyPair generateKeyPair() {
+    public String getRootAlias() {
+        return certificateRepository.getRootAlias();
+    }
+
+    private static KeyPair generateKeyPair() {
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
             SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");

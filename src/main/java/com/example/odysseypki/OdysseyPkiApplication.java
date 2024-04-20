@@ -43,9 +43,11 @@ public class OdysseyPkiApplication {
 		var service = (CertificateService) context.getBean("certificateService");
 
 		try {
-//			service.generateRoot();
+//			service.createRoot();
+			var rootAlias = service.getRootAlias();
+			System.out.println("Root alias: " + rootAlias);
 
-			var cert = service.find("1713612128531");
+//			var cert = service.find("1713612128531");
 
 //			service.add(
 //					"0",
@@ -55,7 +57,7 @@ public class OdysseyPkiApplication {
 //					new Date(2024, Calendar.JANUARY, 1),
 //					new Date(2034, Calendar.JANUARY, 1));
 
-			System.out.println(cert.getSerialNumber());
+//			System.out.println(cert.getSerialNumber());
 
 		} catch( Exception e) {
 			e.printStackTrace();

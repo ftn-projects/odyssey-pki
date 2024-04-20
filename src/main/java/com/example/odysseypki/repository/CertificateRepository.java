@@ -46,6 +46,16 @@ public class CertificateRepository {
         return keyStoreRepository.loadAll(KEYSTORE_PATH);
     }
 
+    public String getRootAlias() {
+        try {
+            var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
+            return tree.getRootAlias();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public void delete(String alias) throws IOException, ClassNotFoundException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 
