@@ -9,9 +9,11 @@ import com.example.odysseypki.keystore.KeyStoreWriter;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.modelmapper.ModelMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -23,7 +25,10 @@ import java.util.Date;
 
 @SpringBootApplication
 public class OdysseyPkiApplication {
-
+	@Bean
+	public ModelMapper getModelMapper() {
+		return new ModelMapper();
+	}
 	public static final String CERT_KEYSTORE = "src/main/resources/static/certs.jks";
 
 	public static void main(String[] args) {
