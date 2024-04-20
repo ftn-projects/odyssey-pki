@@ -11,6 +11,12 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
+
+import static java.util.Collections.emptyEnumeration;
 
 @Component
 public class KeyStoreReader {
@@ -36,5 +42,17 @@ public class KeyStoreReader {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public Enumeration<String> getAllAliases(String keyStoreFile, String keyStorePass) {
+        try {
+            var ks = KeyStore.getInstance("JKS", "SUN");
+            var in = new BufferedInputStream(new FileInputStream(keyStoreFile));
+            ks.load(in, keyStorePass.toCharArray());
+            return keyStore.aliases();
+        } catch (KeyStoreException | NoSuchProviderException | NoSuchAlgorithmException | CertificateException | IOException e) {
+            e.printStackTrace();
+        }
+        return Collections.emptyEnumeration();
     }
 }

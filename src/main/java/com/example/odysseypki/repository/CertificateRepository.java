@@ -10,6 +10,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 @Component
 public class CertificateRepository {
@@ -19,24 +20,30 @@ public class CertificateRepository {
     @Autowired
     private KeyStoreRepository keyStoreRepository;
 
-    public void save(String parentAlias, Certificate certificate) throws IOException, ClassNotFoundException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
-        var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
-
+    public Certificate save(String parentAlias, Certificate certificate) throws IOException, ClassNotFoundException {
         keyStoreRepository.save(certificate, KEYSTORE_PATH);
+
+        var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
         tree.addCertificate(parentAlias, certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
+        return certificate;
     }
 
-    public void saveRoot(Certificate certificate) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
+    public Certificate saveRoot(Certificate certificate) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
         keyStoreRepository.createKeyStore(KEYSTORE_PATH);
         keyStoreRepository.save(certificate, KEYSTORE_PATH);
 
         var tree = CertificateTree.createTree(certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
+        return certificate;
     }
 
-    public X509Certificate load(String alias) {
+    public X509Certificate find(String alias) {
         return keyStoreRepository.load(alias, KEYSTORE_PATH);
+    }
+
+    public List<X509Certificate> findAll() {
+        return keyStoreRepository.loadAll(KEYSTORE_PATH);
     }
 
     public void delete(String alias) throws IOException, ClassNotFoundException {

@@ -34,6 +34,11 @@ public class CertificateTree implements Serializable {
         }
         return null;
     }
+
+    public String getRootAlias() {
+        return root.getAlias();
+    }
+
     private void addCertificates(String parentAlias, String newAlias, CertificateNode currentNode) {
         if(parentAlias.equals(currentNode.getAlias())) {
             //Ignore this, this is just for texting -Arezina

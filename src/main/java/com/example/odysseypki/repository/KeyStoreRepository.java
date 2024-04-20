@@ -19,6 +19,8 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -48,6 +50,16 @@ public class KeyStoreRepository {
         return (X509Certificate) keyStoreReader.readCertificate(filepath, getSecret(), alias);
     }
 
+    public List<X509Certificate> loadAll(String filepath) {
+        List<X509Certificate> certificates = new ArrayList<>();
+        var aliases = keyStoreReader.getAllAliases(filepath, getSecret());
+
+        while (aliases.hasMoreElements())
+            certificates.add(load(aliases.nextElement(), filepath));
+
+        return certificates;
+    }
+
     public void createKeyStore(String filepath) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
@@ -66,12 +78,11 @@ public class KeyStoreRepository {
             return aclRepository.load("ks1", AclRepository.KEYSTORE);
         } catch (IOException | IllegalBlockSizeException | NoSuchPaddingException | BadPaddingException |
                  NoSuchAlgorithmException | InvalidKeyException e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException(e);
         }
     }
 
     private String generateKeystorePassword() {
-            return BigInteger.valueOf(System.currentTimeMillis()).toString();
+        return BigInteger.valueOf(System.currentTimeMillis()).toString();
     }
 }
