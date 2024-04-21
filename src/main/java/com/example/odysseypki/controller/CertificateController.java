@@ -1,6 +1,6 @@
 package com.example.odysseypki.controller;
 
-import com.example.odysseypki.dto.CertificateDTO;
+import com.example.odysseypki.dto.CertificateCreationDTO;
 import com.example.odysseypki.service.CertificateService;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,37 +10,43 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.cert.X509Certificate;
 
 @RestController
 @RequestMapping(value = "/api/v1/certificates")
 public class CertificateController {
     @Autowired
-    private CertificateService certificateService;
+    private CertificateService service;
 
     @GetMapping
-    public ResponseEntity<?> findAll() {
-        return new ResponseEntity<>(certificateService.findAll(), HttpStatus.OK);
+    public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
+        return new ResponseEntity<>(service.findAll(), HttpStatus.OK);
     }
 
     @GetMapping("/{alias}")
-    public ResponseEntity<?> findByAlias(@PathVariable String alias) {
-        X509Certificate certificate = certificateService.find(alias);
+    public ResponseEntity<?> findByAlias(@PathVariable String alias) throws GeneralSecurityException, IOException {
+        var certificate = service.find(alias);
         if (certificate == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         return new ResponseEntity<>(certificate, HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody CertificateDTO dto) throws GeneralSecurityException,
+    public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
             IOException, ClassNotFoundException, OperatorCreationException {
-        certificateService.create(dto.getParentAlias(), dto.getCommonName(), dto.getEmail(), dto.getUid(), dto.getStartDate(), dto.getEndDate());
-        return new ResponseEntity<>(HttpStatus.CREATED);
+        var created = service.create(
+                dto.getParentAlias(),
+                dto.getCommonName(),
+                dto.getEmail(),
+                dto.getUid(),
+                dto.getStartDate(),
+                dto.getEndDate()
+        );
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{alias}")
-    public ResponseEntity<?> deleteByAlias(@PathVariable String alias) throws IOException, ClassNotFoundException {
-        certificateService.delete(alias);
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<?> deleteByAlias(@PathVariable String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
+        var deleted = service.delete(alias);
+        return new ResponseEntity<>(deleted, HttpStatus.OK);
     }
 
 }

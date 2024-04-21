@@ -1,4 +1,4 @@
-package com.example.odysseypki.algorithm;
+package com.example.odysseypki.acl;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
@@ -13,10 +13,11 @@ public class AesEncryption {
 
     private static SecretKey getSecretKey(String secret) throws NoSuchAlgorithmException {
         var sha = MessageDigest.getInstance("SHA-256");
-
         var hashedKey = sha.digest(secret.getBytes());
         var keyBytes = new byte[KEY_SIZE];
+
         System.arraycopy(hashedKey, 0, keyBytes, 0, KEY_SIZE);
+
         return new SecretKeySpec(keyBytes, ALGORITHM);
     }
 

@@ -18,6 +18,6 @@ public class RequestDTOMapper {
         return mapper.map(dto, Request.class);
     }
     public static RequestDTO fromRequestToDTO(Request request) {
-        return new RequestDTO(request);
+        return mapper.map(request, RequestDTO.class);
     }
 }

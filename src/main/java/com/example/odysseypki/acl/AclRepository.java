@@ -1,29 +1,25 @@
-package com.example.odysseypki.repository;
+package com.example.odysseypki.acl;
 
 import com.example.odysseypki.OdysseyPkiProperties;
-import com.example.odysseypki.algorithm.AesEncryption;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
 
 @Component
 public class AclRepository {
-    public static final String KEYSTORE = "src/main/resources/static/acl/keystore.acl";
-    public static final String PRIVATE_KEY = "src/main/resources/static/acl/private-key.acl";
+    public static final String KEYSTORES_ACL_PATH = "src/main/resources/static/acl/keystores.acl";
+    public static final String PRIVATE_KEYS_ACL_PATH = "src/main/resources/static/acl/private-keys.acl";
 
     @Autowired
     private OdysseyPkiProperties properties;
 
-    public void save(String id, String password, String filepath) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    public void save(String id, String password, String filepath) throws GeneralSecurityException, IOException {
         var encryptedPassword = AesEncryption.encrypt(password, properties.getSecret());
         var encryptedId = AesEncryption.encrypt(id, properties.getSecret());
 
@@ -33,7 +29,7 @@ public class AclRepository {
         }
     }
 
-    public String load(String id, String filepath) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    public String load(String id, String filepath) throws GeneralSecurityException, IOException {
         var encryptedId = AesEncryption.encrypt(id, properties.getSecret());
 
         try (var reader = Files.newBufferedReader(Paths.get(filepath))) {

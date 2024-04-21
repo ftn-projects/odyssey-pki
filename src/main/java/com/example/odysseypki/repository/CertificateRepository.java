@@ -1,15 +1,14 @@
 package com.example.odysseypki.repository;
 
-import com.example.odysseypki.certificatetree.CertificateTree;
+import com.example.odysseypki.certificate.CertificateTree;
 import com.example.odysseypki.entity.Certificate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
+import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -20,47 +19,53 @@ public class CertificateRepository {
     @Autowired
     private KeyStoreRepository keyStoreRepository;
 
-    public Certificate save(String parentAlias, Certificate certificate) throws IOException, ClassNotFoundException {
+    public Certificate save(String parentAlias, Certificate certificate) throws GeneralSecurityException, IOException, ClassNotFoundException {
         keyStoreRepository.save(certificate, KEYSTORE_PATH);
 
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
-        tree.addCertificate(parentAlias, certificate.getAlias());
+        tree.addAlias(parentAlias, certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
+
         return certificate;
     }
 
-    public Certificate saveRoot(Certificate certificate) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
+    public Certificate saveRoot(Certificate certificate) throws GeneralSecurityException, IOException {
         keyStoreRepository.createKeyStore(KEYSTORE_PATH);
         keyStoreRepository.save(certificate, KEYSTORE_PATH);
 
         var tree = CertificateTree.createTree(certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
+
         return certificate;
     }
 
-    public X509Certificate find(String alias) {
+    public X509Certificate find(String alias) throws GeneralSecurityException, IOException {
         return keyStoreRepository.load(alias, KEYSTORE_PATH);
     }
 
-    public List<X509Certificate> findAll() {
-        return keyStoreRepository.loadAll(KEYSTORE_PATH);
+    public List<X509Certificate> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
+        var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
+        return keyStoreRepository.loadAll(tree.getAllAliases(), KEYSTORE_PATH);
     }
 
-    public String getRootAlias() {
-        try {
-            var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
-            return tree.getRootAlias();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
+    public String getRootAlias() throws IOException, ClassNotFoundException {
+        var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
+        return tree.getRootAlias();
     }
 
-    public void delete(String alias) throws IOException, ClassNotFoundException {
+    public List<X509Certificate> delete(String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 
-        var aliasesForDeletion = tree.removeCertificate(alias);
-        aliasesForDeletion.forEach(a -> keyStoreRepository.delete(a, KEYSTORE_PATH));
+        if (tree.getRootAlias().equals(alias))
+            throw new IllegalArgumentException("Root certificate cannot be deleted.");
+
+        var aliasesForDeletion = tree.removeAlias(alias);
+        var deleted = new ArrayList<X509Certificate>();
+
+        for (var a : aliasesForDeletion)
+            deleted.add(keyStoreRepository.delete(a, KEYSTORE_PATH));
+
         tree.serialize(ALIAS_TREE_PATH);
+        return deleted;
     }
 }

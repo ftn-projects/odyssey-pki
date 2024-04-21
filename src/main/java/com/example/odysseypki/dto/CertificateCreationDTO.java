@@ -12,7 +12,7 @@ import java.util.Date;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CertificateDTO {
+public class CertificateCreationDTO {
     private String parentAlias;
     private String commonName;
     private String email;

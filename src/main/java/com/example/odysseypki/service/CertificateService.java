@@ -2,11 +2,9 @@ package com.example.odysseypki.service;
 
 import com.example.odysseypki.certificate.CertificateBuilder;
 import com.example.odysseypki.entity.Certificate;
-import com.example.odysseypki.repository.AclRepository;
+import com.example.odysseypki.acl.AclRepository;
 import com.example.odysseypki.repository.CertificateRepository;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.X500NameBuilder;
-import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -32,7 +30,7 @@ public class CertificateService {
         var keyPair = generateKeyPair();
         if (keyPair == null) return null;
 
-        var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEY);
+        var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEYS_ACL_PATH);
         if (parentPrivateKey == null) return null;
 
         var parent = certificateRepository.find(parentAlias);
@@ -44,7 +42,7 @@ public class CertificateService {
                 .withEndDate(endDate)
                 .build();
 
-        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEY);
+        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
         return certificateRepository.save(parentAlias, certificate);
     }
 
@@ -60,47 +58,36 @@ public class CertificateService {
                 .withExpiration(10)
                 .build();
 
-        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEY);
+        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
         return certificateRepository.saveRoot(certificate);
     }
 
-    public void delete(String alias) throws IOException, ClassNotFoundException {
-        certificateRepository.delete(alias);
+    public List<X509Certificate> delete(String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
+        return certificateRepository.delete(alias);
     }
 
-    public X509Certificate find(String alias) {
+    public X509Certificate find(String alias) throws GeneralSecurityException, IOException {
         return certificateRepository.find(alias);
     }
 
-    public List<X509Certificate> findAll() {
+    public List<X509Certificate> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
         return certificateRepository.findAll();
     }
 
-    public String getRootAlias() {
+    public String getRootAlias() throws IOException, ClassNotFoundException {
         return certificateRepository.getRootAlias();
     }
 
     private static KeyPair generateKeyPair() {
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
+            var keyGen = KeyPairGenerator.getInstance("RSA");
+            var random = SecureRandom.getInstance("SHA1PRNG", "SUN");
             keyGen.initialize(2048, random);
             return keyGen.generateKeyPair();
         } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static X500Name getX500Name(String commonName, String email, String uid) {
-        X500NameBuilder builder = new X500NameBuilder(BCStyle.INSTANCE);
-        if (commonName != null)
-            builder.addRDN(BCStyle.CN, commonName);
-        if (email != null)
-            builder.addRDN(BCStyle.E, email);
-        if (uid != null)
-            builder.addRDN(BCStyle.UID, uid);
-        return builder.build();
     }
 
     public static PrivateKey decodePrivateKey(String key) throws NoSuchAlgorithmException, InvalidKeySpecException {

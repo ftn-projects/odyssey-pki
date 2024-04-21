@@ -1,4 +1,4 @@
-package com.example.odysseypki.certificatetree;
+package com.example.odysseypki.certificate;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.function.Consumer;
 
 @Getter
 @Setter
@@ -15,31 +15,21 @@ import java.util.Random;
 public class CertificateTree implements Serializable {
     private CertificateNode root;
 
-    public CertificateNode findByAlias(String alias) {
-        if (root == null || alias == null || alias.isEmpty()) {
-            return null;
-        }
-        return findByAlias(root, alias);
-    }
-
-    private CertificateNode findByAlias(CertificateNode node, String alias) {
-        if (node.getAlias().equals(alias)) {
-            return node;
-        }
-        for (CertificateNode child : node.getChildren()) {
-            CertificateNode result = findByAlias(child, alias);
-            if (result != null) {
-                return result;
-            }
-        }
-        return null;
+    public boolean containsAlias(String alias) {
+        return getAllAliases().contains(alias);
     }
 
     public String getRootAlias() {
         return root.getAlias();
     }
 
-    private void addCertificates(String parentAlias, String newAlias, CertificateNode currentNode) {
+    public List<String> getAllAliases() {
+        var aliases = new ArrayList<String>();
+        dipTraverse(root, node -> aliases.add(node.getAlias()));
+        return aliases;
+    }
+
+    private void addAlias(String parentAlias, String newAlias, CertificateNode currentNode) {
         if(parentAlias.equals(currentNode.getAlias())) {
             //Ignore this, this is just for texting -Arezina
             //System.out.println("Inserting into Alias: " + currentNode.getAlias() + " New Alias: " + newAlias);
@@ -48,24 +38,24 @@ public class CertificateTree implements Serializable {
 
         } else {
             for(CertificateNode childNode : currentNode.getChildren()) {
-                addCertificates(parentAlias, newAlias, childNode);
+                addAlias(parentAlias, newAlias, childNode);
             }
         }
     }
 
-    public void addCertificate(String parentAlias, String newAlias) {
-        addCertificates(parentAlias, newAlias, root);
+    public void addAlias(String parentAlias, String newAlias) {
+        addAlias(parentAlias, newAlias, root);
     }
 
     public static CertificateTree createTree(String rootAlias) {
         return new CertificateTree(new CertificateNode(rootAlias));
     }
 
-    public List<String> removeCertificate(String toBeRemoved){
+    public List<String> removeAlias(String toBeRemoved){
         if (root == null) {
             return null;
         }
-        else if(root.getAlias().equals(toBeRemoved)){
+        else if (root.getAlias().equals(toBeRemoved)){
             List<String> deletedCertificates = new ArrayList<>();
             if (root.getChildren() != null) {
                 for (CertificateNode childNode : root.getChildren()) {
@@ -75,11 +65,11 @@ public class CertificateTree implements Serializable {
             this.root = null;
             return deletedCertificates;
         }
-        else{
-            return removeCertificate(toBeRemoved, this.root);
+        else {
+            return removeAlias(toBeRemoved, this.root);
         }
     }
-    private List<String> removeCertificate(String toBeRemoved, CertificateNode currentNode){
+    private List<String> removeAlias(String toBeRemoved, CertificateNode currentNode){
 
         if(currentNode.getAlias().equals(toBeRemoved)){
             CertificateNode parent = currentNode.getParent();
@@ -92,7 +82,7 @@ public class CertificateTree implements Serializable {
         }
 
         for(CertificateNode childNode : currentNode.getChildren()){
-            var returns = removeCertificate(toBeRemoved, childNode);
+            var returns = removeAlias(toBeRemoved, childNode);
             if(returns!=null)
                 return returns;
         }
@@ -115,6 +105,14 @@ public class CertificateTree implements Serializable {
             System.out.println("Certificate tree:");
             printNode(root, 0);
         }
+    }
+
+    // Generic tree traversal with function to be performed on each node
+    // Can be used for deletion and printing (if depth is added to the CertificateNode)
+    private void dipTraverse(CertificateNode node, Consumer<CertificateNode> consumer) {
+        consumer.accept(node);
+        for (CertificateNode child : node.getChildren())
+            dipTraverse(child, consumer);
     }
 
     private void printNode(CertificateNode node, int depth) {

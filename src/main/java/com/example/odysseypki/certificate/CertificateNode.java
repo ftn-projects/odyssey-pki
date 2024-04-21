@@ -1,4 +1,4 @@
-package com.example.odysseypki.certificatetree;
+package com.example.odysseypki.certificate;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

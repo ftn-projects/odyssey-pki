@@ -16,42 +16,42 @@ import java.util.List;
 @RequestMapping(value = "/api/v1/requests")
 public class RequestController {
     @Autowired
-    private RequestService requestService;
+    private RequestService service;
 
     @GetMapping
     public ResponseEntity<?> getAll() {
-        return new ResponseEntity<>(mapToDTO(requestService.getAll()), HttpStatus.OK);
+        return new ResponseEntity<>(mapToDTO(service.getAll()), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getRequestById(@PathVariable Long id) {
-        Request request;
-        request = requestService.findById(id);
+        Request request = service.findById(id);
         if (request == null) return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.OK);
     }
 
     @PostMapping
     public ResponseEntity<?> createRequest(@RequestBody RequestDTO dto) {
         Request request = RequestDTOMapper.fromDTOtoRequest(dto);
-        requestService.create(request.getCommonName(),request.getEmail(),request.getUid(),request.getDate());
+        service.create(request.getCommonName(),request.getEmail(),request.getUid(),request.getDate());
 
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/accept/{id}")
     public ResponseEntity<?> acceptRequest(@PathVariable Long id) {
-        Request request = requestService.accept(id);
+        Request request = service.accept(id);
 
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.OK);
     }
     @PutMapping("/decline/{id}")
     public ResponseEntity<?> declineRequest(@PathVariable Long id) {
-        Request request = requestService.decline(id);
+        Request request = service.decline(id);
 
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.OK);
     }
     private static List<RequestDTO> mapToDTO(List<Request> users) {
-        return users.stream().map(RequestDTO::new).toList();
+        return users.stream().map(RequestDTOMapper::fromRequestToDTO).toList();
     }
 }

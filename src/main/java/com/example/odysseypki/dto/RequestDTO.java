@@ -2,7 +2,10 @@ package com.example.odysseypki.dto;
 
 
 import com.example.odysseypki.entity.Request;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -17,13 +20,4 @@ public class RequestDTO {
     private String uid;
     private LocalDateTime date;
     private Request.Status status;
-
-    public RequestDTO(Request request){
-        id = request.getId();
-        commonName = request.getCommonName();
-        email = request.getEmail();
-        uid = request.getUid();
-        date = request.getDate();
-        status = request.getStatus();
-    }
 }
