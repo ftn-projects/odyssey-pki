@@ -40,6 +40,13 @@ public class OdysseyPkiApplication {
 //			var rootAlias = service.getRootAlias();
 //			System.out.println("Root alias: " + rootAlias);
 
+//			var created = service.create(
+//					"1713709846513", "NAJNOVIJE", "NOVO@gmail.com", "AAAAA",
+//					new Date(2024, 1, 1), new Date(2034, 1, 1), new HashMap<>()
+//			);
+//
+//			System.out.println("Created: " + created.getAlias());
+
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

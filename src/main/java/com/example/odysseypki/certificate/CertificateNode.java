@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,9 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 public class CertificateNode implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 94837987498L;
+
         private String alias;
         private List<CertificateNode> children;
         private CertificateNode parent;

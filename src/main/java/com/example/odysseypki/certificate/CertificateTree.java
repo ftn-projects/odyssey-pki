@@ -14,6 +14,9 @@ import java.util.function.Consumer;
 @Setter
 @AllArgsConstructor
 public class CertificateTree implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 81723617236L;
+
     private CertificateNode root;
 
     public boolean containsAlias(String alias) {
