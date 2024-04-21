@@ -13,7 +13,7 @@ import java.util.List;
 
 @Component
 public class CertificateRepository {
-    private static final String KEYSTORE_PATH = "src/main/resources/static/keystore/certificate.jks";
+    public static final String KEYSTORE_PATH = "src/main/resources/static/keystore/certificate.jks";
     private static final String ALIAS_TREE_PATH = "src/main/resources/static/alias-tree.dat";
 
     @Autowired

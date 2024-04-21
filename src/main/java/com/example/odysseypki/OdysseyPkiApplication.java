@@ -1,6 +1,7 @@
 package com.example.odysseypki;
 
 import com.example.odysseypki.controller.CertificateController;
+import com.example.odysseypki.entity.Certificate;
 import org.modelmapper.ModelMapper;
 import com.example.odysseypki.service.CertificateService;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -11,8 +12,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 import java.security.Security;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 @SpringBootApplication
 public class OdysseyPkiApplication {
@@ -31,18 +31,23 @@ public class OdysseyPkiApplication {
 	public static void demo(ApplicationContext context) {
 		var service = (CertificateService) context.getBean("certificateService");
 		var controller = (CertificateController) context.getBean("certificateController");
-
+		var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
 		try {
 
 			// ROOT CREATION
-
+//
 //			service.createRoot();
 //			var rootAlias = service.getRootAlias();
 //			System.out.println("Root alias: " + rootAlias);
 
 //			var created = service.create(
-//					"1713709846513", "NAJNOVIJE", "NOVO@gmail.com", "AAAAA",
-//					new Date(2024, 1, 1), new Date(2034, 1, 1), new HashMap<>()
+//					"1713719148359", "DIMITRIJEOTVORIOCI ", "NOVO@gmail.com", "AAAAA",
+//					new Date(2024, 1, 1), new Date(2034, 1, 1), Map.of(
+////							Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
+////							Certificate.Extension.KEY_USAGE, allKeyUsages,
+////							Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
+////							Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()
+//					)
 //			);
 //
 //			System.out.println("Created: " + created.getAlias());

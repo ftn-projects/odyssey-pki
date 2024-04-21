@@ -1,5 +1,6 @@
 package com.example.odysseypki.repository;
 
+import com.example.odysseypki.OdysseyPkiProperties;
 import com.example.odysseypki.acl.AclRepository;
 import com.example.odysseypki.entity.Certificate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,8 @@ public class KeyStoreRepository {
     private static final String KEYSTORE_PASSWORD_ID = "kspass";
     @Autowired
     private AclRepository aclRepository;
+    @Autowired
+    private OdysseyPkiProperties properties;
 
     public void save(Certificate certificate, String filepath) throws GeneralSecurityException, IOException {
         var ks = loadKeyStore(filepath, getSecret());
@@ -78,21 +81,23 @@ public class KeyStoreRepository {
         ks.load(null, null);
 
         try (var out = new FileOutputStream(filepath)) {
-            var keyStorePass = "aaa"; // TODO
-            aclRepository.save(KEYSTORE_PASSWORD_ID, keyStorePass, AclRepository.KEYSTORES_ACL_PATH);
-            ks.store(out, keyStorePass.toCharArray());
+            ks.store(out, getSecret().toCharArray());
         }
     }
 
-    private String getSecret() {
-        try {
-            return aclRepository.load(KEYSTORE_PASSWORD_ID, AclRepository.KEYSTORES_ACL_PATH);
-        } catch (GeneralSecurityException | IOException e) {
-            throw new RuntimeException(e);
-        }
+    public String getSecret() {
+        return properties.getKeyStorePass();
     }
 
     private String generateKeystorePassword() {
         return BigInteger.valueOf(System.currentTimeMillis()).toString();
+    }
+
+    public KeyStore getKeyStore(String keystorePath) {
+        try {
+            return loadKeyStore(keystorePath, getSecret());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
