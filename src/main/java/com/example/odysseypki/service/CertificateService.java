@@ -14,13 +14,12 @@ import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class CertificateService {
+    private static final Long ROOT_EXPIRATION_MILLIS = 10 * 365 * 24 * 60 * 60 * 1000L; // 10 years
+
     @Autowired
     private AclRepository aclRepository;
     @Autowired
@@ -58,14 +57,17 @@ public class CertificateService {
 
         // SELF SIGNED SO THERE IS NOT PARENT PRIVATE KEY
         var x500Name = new X500Name("CN=root");
+        var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), x500Name)
                 .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), x500Name)
-                .withExpiration(10)
+                .withExpiration(ROOT_EXPIRATION_MILLIS)
                 .withExtensions(Map.of(
-                        Certificate.Extension.BASIC_CONSTRAINTS, List.of("true"),
-                        Certificate.Extension.KEY_USAGE, List.of("Digital Signature", "Key Cert Sign"),
-                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of()))
+                        Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(true)),
+                        Certificate.Extension.KEY_USAGE, allKeyUsages,  // ROOT CERTIFICATE CAN PERFORM ALL ACTIONS
+                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
+                        Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()
+                ))
                 .build();
 
         aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
@@ -86,6 +88,10 @@ public class CertificateService {
 
     public String getRootAlias() throws IOException, ClassNotFoundException {
         return certificateRepository.getRootAlias();
+    }
+
+    public String findParentAlias(String alias) throws IOException, ClassNotFoundException {
+        return certificateRepository.findParentAlias(alias);
     }
 
     private static KeyPair generateKeyPair() {

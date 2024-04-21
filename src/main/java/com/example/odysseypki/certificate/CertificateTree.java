@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 @Getter
@@ -27,6 +28,17 @@ public class CertificateTree implements Serializable {
         var aliases = new ArrayList<String>();
         dipTraverse(root, node -> aliases.add(node.getAlias()));
         return aliases;
+    }
+
+    public String findParentAlias(String alias) {
+        var parent = new AtomicReference<String>();
+
+        dipTraverse(root, node -> {
+            if (node != null && node.getAlias().equals(alias) && node.getParent() != null)
+                parent.set(node.getParent().getAlias());
+        });
+
+        return parent.get();
     }
 
     private void addAlias(String parentAlias, String newAlias, CertificateNode currentNode) {
@@ -111,6 +123,10 @@ public class CertificateTree implements Serializable {
     // Can be used for deletion and printing (if depth is added to the CertificateNode)
     private void dipTraverse(CertificateNode node, Consumer<CertificateNode> consumer) {
         consumer.accept(node);
+
+        if (node == null || node.getChildren() == null)
+            return;
+
         for (CertificateNode child : node.getChildren())
             dipTraverse(child, consumer);
     }

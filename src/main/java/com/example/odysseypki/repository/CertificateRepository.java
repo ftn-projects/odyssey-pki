@@ -53,6 +53,11 @@ public class CertificateRepository {
         return tree.getRootAlias();
     }
 
+    public String findParentAlias(String alias) throws IOException, ClassNotFoundException {
+        var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
+        return tree.findParentAlias(alias);
+    }
+
     public List<X509Certificate> delete(String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 

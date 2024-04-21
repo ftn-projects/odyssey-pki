@@ -87,9 +87,9 @@ public class CertificateBuilder {
         return this;
     }
 
-    public CertificateBuilder withExpiration(int years) {
+    public CertificateBuilder withExpiration(long milliseconds) {
         if (startDate == null) startDate = new Date();
-        endDate = new Date(startDate.getTime() + years * 31556952000L);
+        endDate = new Date(startDate.getTime() + milliseconds);
         return this;
     }
 
@@ -126,32 +126,32 @@ public class CertificateBuilder {
     private int mapKeyUsage(List<String> values) {
         int keyUsage = 0;
         for (var value : values) {
-            switch (value) {
-                case "Digital Signature":
+            switch (Certificate.KeyUsageValue.valueOf(value)) {
+                case DIGITAL_SIGNATURE:
                     keyUsage |= KeyUsage.digitalSignature;
                     break;
-                case "Non-Repudiation":
+                case NON_REPUDIATION:
                     keyUsage |= KeyUsage.nonRepudiation;
                     break;
-                case "Key Encipherment":
+                case KEY_ENCIPHERMENT:
                     keyUsage |= KeyUsage.keyEncipherment;
                     break;
-                case "Data Encipherment":
+                case DATA_ENCIPHERMENT:
                     keyUsage |= KeyUsage.dataEncipherment;
                     break;
-                case "Key Agreement":
+                case KEY_AGREEMENT:
                     keyUsage |= KeyUsage.keyAgreement;
                     break;
-                case "Key Cert Sign":
+                case CERTIFICATE_SIGN:
                     keyUsage |= KeyUsage.keyCertSign;
                     break;
-                case "CRL Sign":
+                case CRL_SIGN:
                     keyUsage |= KeyUsage.cRLSign;
                     break;
-                case "Encipher Only":
+                case ENCIPHER_ONLY:
                     keyUsage |= KeyUsage.encipherOnly;
                     break;
-                case "Decipher Only":
+                case DECIPHER_ONLY:
                     keyUsage |= KeyUsage.decipherOnly;
                     break;
             }

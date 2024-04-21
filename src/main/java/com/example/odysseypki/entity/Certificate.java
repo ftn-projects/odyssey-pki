@@ -20,13 +20,6 @@ public class Certificate {
     private Date endDate;
     private X509Certificate x509Certificate;
 
-    public enum Extension {
-        BASIC_CONSTRAINTS,
-        KEY_USAGE,
-        SUBJECT_KEY_IDENTIFIER,
-        AUTHORITY_KEY_IDENTIFIER
-    }
-
     public boolean isValid() {
         try {
             x509Certificate.checkValidity();
@@ -40,13 +33,26 @@ public class Certificate {
         return x509Certificate.getSerialNumber().toString();
     }
 
-    @Override
-    public String toString() {
-        return "Certificate{" +
-                "issuer='" + issuer + '\'' +
-                ", subject='" + subject + '\'' +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
-                '}';
+    public enum Extension {
+        BASIC_CONSTRAINTS,
+        KEY_USAGE,
+        SUBJECT_KEY_IDENTIFIER,
+        AUTHORITY_KEY_IDENTIFIER
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public enum KeyUsageValue {
+        DIGITAL_SIGNATURE("Digital Signature"),
+        NON_REPUDIATION("Non-Repudiation"),
+        KEY_ENCIPHERMENT("Key Encipherment"),
+        DATA_ENCIPHERMENT("Data Encipherment"),
+        KEY_AGREEMENT("Key Agreement"),
+        CERTIFICATE_SIGN("Certificate Signer"),
+        CRL_SIGN("CRL Signer"),
+        ENCIPHER_ONLY("Encipher Only"),
+        DECIPHER_ONLY("Decipher Only");
+
+        private final String description;
     }
 }

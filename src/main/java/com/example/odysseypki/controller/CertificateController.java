@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,29 +27,22 @@ public class CertificateController {
 
     @GetMapping
     public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
-        return new ResponseEntity<>(service.findAll(), HttpStatus.OK);
+        var certificates = new ArrayList<CertificateDTO>();
+
+        for (var certificate : service.findAll())
+            certificates.add(mapCertificateToDTO(certificate));
+
+        return new ResponseEntity<>(certificates, HttpStatus.OK);
     }
 
     @GetMapping("/{alias}")
-    public ResponseEntity<?> findByAlias(@PathVariable String alias) throws GeneralSecurityException, IOException {
+    public ResponseEntity<?> findByAlias(@PathVariable String alias) throws GeneralSecurityException, IOException, ClassNotFoundException {
         var certificate = service.find(alias);
-        if (certificate == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
+        if (certificate == null)
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
-        // MAPIRANJE UWU
-
-        var dto = new CertificateDTO(
-                certificate.getSerialNumber().toString(),
-                "11",
-                mapX500Principal(certificate.getIssuerX500Principal()),
-                mapX500Principal(certificate.getSubjectX500Principal()),
-                new CertificateDTO.PublicKey(certificate),
-                new CertificateDTO.Validity(certificate),
-                ExtensionMapper.readExtensions(certificate),
-                new CertificateDTO.Signature(certificate)
-        );
-
-        return new ResponseEntity<>(dto, HttpStatus.OK);
+        return new ResponseEntity<>(mapCertificateToDTO(certificate), HttpStatus.OK);
     }
 
     @PostMapping
@@ -72,7 +66,21 @@ public class CertificateController {
         return new ResponseEntity<>(deleted, HttpStatus.OK);
     }
 
-    public static Map<String, String> mapX500Principal(X500Principal principal) {
+    private CertificateDTO mapCertificateToDTO(X509Certificate certificate) throws IOException, ClassNotFoundException, CertificateEncodingException {
+        var alias = certificate.getSerialNumber().toString();
+        return new CertificateDTO(
+                alias,
+                service.findParentAlias(alias),
+                mapX500Principal(certificate.getIssuerX500Principal()),
+                mapX500Principal(certificate.getSubjectX500Principal()),
+                new CertificateDTO.PublicKey(certificate),
+                new CertificateDTO.Validity(certificate),
+                ExtensionMapper.readExtensions(certificate),
+                new CertificateDTO.Signature(certificate)
+        );
+    }
+
+    private static Map<String, String> mapX500Principal(X500Principal principal) {
         var map = new HashMap<String, String>();
         var parts = principal.getName().split(",");
 
