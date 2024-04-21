@@ -1,8 +1,8 @@
 package com.example.odysseypki.service;
 
+import com.example.odysseypki.acl.AclRepository;
 import com.example.odysseypki.certificate.CertificateBuilder;
 import com.example.odysseypki.entity.Certificate;
-import com.example.odysseypki.acl.AclRepository;
 import com.example.odysseypki.repository.CertificateRepository;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -17,6 +17,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class CertificateService {
@@ -25,8 +26,12 @@ public class CertificateService {
     @Autowired
     private CertificateRepository certificateRepository;
 
-    public Certificate create(String parentAlias, String commonName, String email, String uid, Date startDate, Date endDate) throws GeneralSecurityException,
-            IOException, OperatorCreationException, ClassNotFoundException {
+    public Certificate create(
+            String parentAlias,
+            String commonName, String email, String uid,
+            Date startDate, Date endDate,
+            Map<Certificate.Extension, List<String>> extensions)
+            throws GeneralSecurityException, IOException, OperatorCreationException, ClassNotFoundException {
         var keyPair = generateKeyPair();
         if (keyPair == null) return null;
 
@@ -40,6 +45,7 @@ public class CertificateService {
                 .withIssuer(decodePrivateKey(parentPrivateKey), parent.getPublicKey(), issuerName)
                 .withStartDate(startDate)
                 .withEndDate(endDate)
+                .withExtensions(extensions)
                 .build();
 
         aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
@@ -56,6 +62,10 @@ public class CertificateService {
                 .withSubject(keyPair.getPublic(), x500Name)
                 .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), x500Name)
                 .withExpiration(10)
+                .withExtensions(Map.of(
+                        Certificate.Extension.BASIC_CONSTRAINTS, List.of("true"),
+                        Certificate.Extension.KEY_USAGE, List.of("Digital Signature", "Key Cert Sign"),
+                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of()))
                 .build();
 
         aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);

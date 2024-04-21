@@ -1,11 +1,14 @@
 package com.example.odysseypki.dto;
 
+import com.example.odysseypki.entity.Certificate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 
 @Getter
@@ -19,4 +22,5 @@ public class CertificateCreationDTO {
     private String uid;
     private Date startDate;
     private Date endDate;
+    private Map<Certificate.Extension, List<String>> extensions;
 }
