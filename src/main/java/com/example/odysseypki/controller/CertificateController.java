@@ -83,16 +83,14 @@ public class CertificateController {
     private static Map<String, String> mapX500Principal(X500Principal principal) {
         var map = new HashMap<String, String>();
         var parts = principal.getName().split(",");
+        var dns = List.of("CN", "E", "UID");
 
         for (String part : parts) {
-            part = part.trim();
-            if (part.startsWith("CN="))
-                map.put("CN", part.substring(3));
-            else if (part.startsWith("E="))
-                map.put("E", part.substring(2));
-            else if (part.startsWith("UID="))
-                map.put("UID", part.substring(4));
+            var tokens = part.trim().split("=");
+            if (dns.contains(tokens[0]))
+                map.put(tokens[0], tokens[1]);
         }
+
         return map;
     }
 }

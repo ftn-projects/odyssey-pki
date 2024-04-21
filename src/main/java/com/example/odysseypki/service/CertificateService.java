@@ -38,7 +38,7 @@ public class CertificateService {
         if (parentPrivateKey == null) return null;
 
         var parent = certificateRepository.find(parentAlias);
-        var issuerName = new X500Name(parent.getIssuerX500Principal().getName());
+        var issuerName = new X500Name(parent.getSubjectX500Principal().getName());
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), commonName, email, uid)
                 .withIssuer(decodePrivateKey(parentPrivateKey), parent.getPublicKey(), issuerName)
