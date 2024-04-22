@@ -26,6 +26,7 @@ public class CertificateBuilder {
     private Date startDate = null;
     private Date endDate = null;
     private BigInteger serialNumber = null;
+    private String alias = null;
     private Map<Certificate.Extension, List<String>> extensions = new HashMap<>();
 
     public Certificate build() throws OperatorCreationException, CertificateException, CertIOException {
@@ -34,6 +35,7 @@ public class CertificateBuilder {
             throw new IllegalArgumentException("Missing required fields");
         if (startDate == null) startDate = new Date();
         if (serialNumber == null) serialNumber = generateSerialNumber();
+        if (alias == null) alias = serialNumber.toString();
 
         // BUILDER SETUP
         var builder = new JcaX509v3CertificateBuilder(
@@ -53,8 +55,7 @@ public class CertificateBuilder {
 
         return new Certificate(
                 subject, issuer,
-                serialNumber.toString(),
-                startDate, endDate,
+                alias, startDate, endDate,
                 x509Certificate
         );
     }
@@ -66,10 +67,6 @@ public class CertificateBuilder {
     public CertificateBuilder withSubject(PublicKey key, X500Name x500Name) {
         subject = new Subject(key, x500Name);
         return this;
-    }
-
-    public CertificateBuilder withSubject(PublicKey key, String commonName, String email, String uid) {
-        return withSubject(key, new X500Name("CN=" + commonName + ", E=" + email + ", UID=" + uid));
     }
 
     public CertificateBuilder withIssuer(PrivateKey privateKey, PublicKey publicKey, X500Name x500Name) {
@@ -90,6 +87,11 @@ public class CertificateBuilder {
     public CertificateBuilder withExpiration(long milliseconds) {
         if (startDate == null) startDate = new Date();
         endDate = new Date(startDate.getTime() + milliseconds);
+        return this;
+    }
+
+    public CertificateBuilder withAlias(String alias) {
+        this.alias = alias;
         return this;
     }
 

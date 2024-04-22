@@ -19,102 +19,158 @@ import java.util.*;
 @Component
 public class CertificateService {
     private static final Long ROOT_EXPIRATION_MILLIS = 10 * 365 * 24 * 60 * 60 * 1000L; // 10 years
+    private static final String KEY_ALGORITHM = "RSA";
+    private static final String ROOT_ALIAS = "root";
+    private static final String HTTPS_ALIAS = "https-certificate";
 
     @Autowired
     private AclRepository aclRepository;
     @Autowired
     private CertificateRepository certificateRepository;
 
-    public Certificate create(
-            String parentAlias,
-            String commonName, String email, String uid,
-            Date startDate, Date endDate,
-            Map<Certificate.Extension, List<String>> extensions)
-            throws GeneralSecurityException, IOException, OperatorCreationException, ClassNotFoundException {
+    public Certificate create(String parentAlias, String commonName, Date startDate, Date endDate,
+                              Map<Certificate.Extension, List<String>> extensions)
+            throws IOException, GeneralSecurityException, OperatorCreationException {
+        return create(parentAlias, null,
+                new X500Name("CN=" + commonName),
+                startDate, endDate, extensions
+        );
+    }
+
+    public Certificate create(String parentAlias, String alias, X500Name subjectName,
+            Date startDate, Date endDate, Map<Certificate.Extension, List<String>> extensions)
+            throws IOException, GeneralSecurityException, OperatorCreationException {
+        var parent = certificateRepository.find(parentAlias);
+        if (parent == null) return null;
+
+        if (parent.getBasicConstraints() < 0)
+            throw new IllegalArgumentException("Parent certificate is not a CA.");
+        if (!keyUsageIsSubset(parent.getKeyUsage(), extensions))
+            throw new IllegalArgumentException("Key usage of the new certificate must be a subset of the parent certificate key usage.");
+
+        var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEYS_ACL);
+        if (parentPrivateKey == null) return null;
+
         var keyPair = generateKeyPair();
         if (keyPair == null) return null;
 
-        var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEYS_ACL_PATH);
-        if (parentPrivateKey == null) return null;
-
-        var parent = certificateRepository.find(parentAlias);
         var issuerName = new X500Name(parent.getSubjectX500Principal().getName());
         var certificate = new CertificateBuilder()
-                .withSubject(keyPair.getPublic(), commonName, email, uid)
+                .withSubject(keyPair.getPublic(), subjectName)
                 .withIssuer(decodePrivateKey(parentPrivateKey), parent.getPublicKey(), issuerName)
                 .withStartDate(startDate)
                 .withEndDate(endDate)
+                .withAlias(alias)
                 .withExtensions(extensions)
                 .build();
 
-        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
+        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
         return certificateRepository.save(parentAlias, certificate);
     }
 
-    public Certificate createRoot() throws IOException, GeneralSecurityException, OperatorCreationException {
-        var keyPair = generateKeyPair();
-        if (keyPair == null) return null;
+    private boolean keyUsageIsSubset(boolean[] keyUsage, Map<Certificate.Extension, List<String>> extensions) {
+        List<String> keyUsageValues = extensions.get(Certificate.Extension.KEY_USAGE);
+        if (keyUsageValues == null) return true;
 
-        // SELF SIGNED SO THERE IS NOT PARENT PRIVATE KEY
-        var x500Name = new X500Name("CN=root");
+        return keyUsageValues.stream().allMatch(usage -> {
+            try {
+                var keyUsageEnum = Certificate.KeyUsageValue.valueOf(usage);
+                return keyUsage[keyUsageEnum.ordinal()];
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        });
+    }
+
+    public void initializeKeyStore() {
+        try {
+            createRoot();
+            create(ROOT_ALIAS, HTTPS_ALIAS,
+                    new X500Name("CN=Https Certificate"),
+                    new Date(), new Date(System.currentTimeMillis() + ROOT_EXPIRATION_MILLIS),
+                    Map.of(
+                            Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
+                            Certificate.Extension.KEY_USAGE, List.of(
+                                    Certificate.KeyUsageValue.DIGITAL_SIGNATURE.name(),
+                                    Certificate.KeyUsageValue.KEY_ENCIPHERMENT.name(),
+                                    Certificate.KeyUsageValue.KEY_AGREEMENT.name()),
+                            Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
+                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of())
+            );
+        } catch (IOException | GeneralSecurityException | OperatorCreationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void createRoot() throws IOException, GeneralSecurityException, OperatorCreationException {
+        var keyPair = generateKeyPair();
+
+        // SELF SIGNED SO THERE IS NO PARENT PRIVATE KEY
+        var x500Name = new X500Name("CN=Root Certificate");
         var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), x500Name)
                 .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), x500Name)
                 .withExpiration(ROOT_EXPIRATION_MILLIS)
+                .withAlias(ROOT_ALIAS)
                 .withExtensions(Map.of(
                         Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(true)),
                         Certificate.Extension.KEY_USAGE, allKeyUsages,  // ROOT CERTIFICATE CAN PERFORM ALL ACTIONS
-                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
-                        Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()
+                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of()
                 ))
                 .build();
 
-        aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL_PATH);
-        return certificateRepository.saveRoot(certificate);
+        aclRepository.save(ROOT_ALIAS, encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
+        certificateRepository.saveRoot(certificate);
     }
 
-    public List<X509Certificate> delete(String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
+    public List<X509Certificate> delete(String alias) throws IOException, GeneralSecurityException {
+        if (ROOT_ALIAS.equals(alias))
+            throw new IllegalArgumentException("Root certificate cannot be deleted.");
+
         return certificateRepository.delete(alias);
     }
 
-    public X509Certificate find(String alias) throws GeneralSecurityException, IOException {
+    public X509Certificate find(String alias) throws IOException, GeneralSecurityException {
         return certificateRepository.find(alias);
     }
 
-    public List<X509Certificate> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
+    public List<X509Certificate> findAll() throws IOException, GeneralSecurityException {
         return certificateRepository.findAll();
     }
 
-    public String getRootAlias() throws IOException, ClassNotFoundException {
-        return certificateRepository.getRootAlias();
-    }
-
-    public String findParentAlias(String alias) throws IOException, ClassNotFoundException {
+    public String findParentAlias(String alias) throws IOException {
         return certificateRepository.findParentAlias(alias);
     }
 
     private static KeyPair generateKeyPair() {
         try {
-            var keyGen = KeyPairGenerator.getInstance("RSA");
+            var keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             var random = SecureRandom.getInstance("SHA1PRNG", "SUN");
             keyGen.initialize(2048, random);
             return keyGen.generateKeyPair();
         } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
-    public static PrivateKey decodePrivateKey(String key) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        var keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(key));
-        var kf = KeyFactory.getInstance("RSA");
-        return kf.generatePrivate(keySpec);
+    public static PrivateKey decodePrivateKey(String key) {
+        try {
+            var keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(key));
+            var kf = KeyFactory.getInstance(KEY_ALGORITHM);
+            return kf.generatePrivate(keySpec);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public static String encodePrivateKey(PrivateKey key) throws GeneralSecurityException {
-        var kf = KeyFactory.getInstance("RSA");
-        var keySpec = kf.getKeySpec(key, PKCS8EncodedKeySpec.class);
-        return Base64.getEncoder().encodeToString(keySpec.getEncoded());
+    public static String encodePrivateKey(PrivateKey key) {
+        try {
+            var kf = KeyFactory.getInstance(KEY_ALGORITHM);
+            var keySpec = kf.getKeySpec(key, PKCS8EncodedKeySpec.class);
+            return Base64.getEncoder().encodeToString(keySpec.getEncoded());
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
