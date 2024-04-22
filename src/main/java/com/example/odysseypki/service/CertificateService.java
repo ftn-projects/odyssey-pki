@@ -5,6 +5,7 @@ import com.example.odysseypki.certificate.CertificateBuilder;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.repository.CertificateRepository;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.jcajce.provider.asymmetric.X509;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -189,5 +190,12 @@ public class CertificateService {
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public X509Certificate findByCommonName(String commonName) throws GeneralSecurityException, IOException {
+        for (var c : findAll())
+            if (c.getSubjectX500Principal().getName().toLowerCase().contains(commonName))
+                return c;
+        return null;
     }
 }

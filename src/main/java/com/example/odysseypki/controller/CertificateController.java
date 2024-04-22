@@ -6,7 +6,9 @@ import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.service.CertificateService;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +44,41 @@ public class CertificateController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
         return new ResponseEntity<>(mapCertificateToDTO(certificate), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/download/{name}/{surname}", produces = "application/x-x509-ca-cert")
+    public ResponseEntity<byte[]> findByCommonName(@PathVariable String name, @PathVariable String surname) {
+        try {
+            var certificate = service.findByCommonName(
+                    name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
+            );
+
+            if (certificate == null)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+            // Get bytes from certificate
+            byte[] certBytes = certificate.getEncoded();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/x-x509-ca-cert"));
+            headers.setContentDispositionFormData("attachment", "certificate.cer");
+
+            return new ResponseEntity<>(certBytes, headers, HttpStatus.OK);
+        } catch (CertificateEncodingException e) {
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/has/{name}/{surname}")
+    public ResponseEntity<?> hasCertificate(@PathVariable String name, @PathVariable String surname) throws GeneralSecurityException, IOException {
+        var certificate = service.findByCommonName(
+                name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
+        );
+        return new ResponseEntity<>(certificate != null, HttpStatus.OK);
     }
 
     @PostMapping

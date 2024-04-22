@@ -46,12 +46,14 @@ public class RequestController {
 
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.OK);
     }
+
     @PutMapping("/decline/{id}")
     public ResponseEntity<?> declineRequest(@PathVariable Long id) {
         Request request = service.decline(id);
 
         return new ResponseEntity<>(RequestDTOMapper.fromRequestToDTO(request), HttpStatus.OK);
     }
+
     private static List<RequestDTO> mapToDTO(List<Request> users) {
         return users.stream().map(RequestDTOMapper::fromRequestToDTO).toList();
     }
