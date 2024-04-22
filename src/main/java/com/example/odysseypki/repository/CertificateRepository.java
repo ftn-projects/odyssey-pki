@@ -20,19 +20,19 @@ public class CertificateRepository {
     @Autowired
     private KeyStoreRepository keyStoreRepository;
 
-    public Certificate save(String parentAlias, Certificate certificate, PrivateKey key) throws IOException, GeneralSecurityException {
+    public Certificate save(String parentAlias, Certificate certificate) throws IOException, GeneralSecurityException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
 
-        keyStoreRepository.save(certificate, key);
+        keyStoreRepository.save(certificate);
         tree.addAlias(parentAlias, certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
 
         return certificate;
     }
 
-    public void saveRoot(Certificate certificate, PrivateKey key) throws IOException, GeneralSecurityException {
+    public void saveRoot(Certificate certificate) throws IOException, GeneralSecurityException {
         keyStoreRepository.createKeyStore();
-        keyStoreRepository.save(certificate, key);
+        keyStoreRepository.save(certificate);
 
         var tree = CertificateTree.createTree(certificate.getAlias());
         tree.serialize(ALIAS_TREE_PATH);

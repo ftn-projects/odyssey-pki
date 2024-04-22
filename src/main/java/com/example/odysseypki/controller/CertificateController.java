@@ -2,6 +2,7 @@ package com.example.odysseypki.controller;
 
 import com.example.odysseypki.dto.CertificateCreationDTO;
 import com.example.odysseypki.dto.CertificateDTO;
+import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.service.CertificateService;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/api/v1/certificates")
@@ -47,15 +45,22 @@ public class CertificateController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
-            IOException, OperatorCreationException {
-        var created = service.create(
-                dto.getParentAlias(),
-                dto.getCommonName(),
-                dto.getStartDate(),
-                dto.getEndDate(),
-                dto.getExtensions()
-        );
-        return new ResponseEntity<>(created, HttpStatus.CREATED);
+            IOException, OperatorCreationException, ClassNotFoundException {
+        Certificate created;
+
+        if (dto.getIsHttpsCertificate()) {
+            created = service.createHttpsCertificate(
+                    dto.getParentAlias(), dto.getCommonName(),
+                    new Date(dto.getStartDate()), new Date(dto.getEndDate())
+            );
+        } else {
+            created = service.create(
+                    dto.getParentAlias(), dto.getCommonName(),
+                    new Date(dto.getStartDate()), new Date(dto.getEndDate()),
+                    dto.getExtensions(), false
+            );
+        }
+        return new ResponseEntity<>(mapCertificateToDTO(created.getX509Certificate()), HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{alias}")

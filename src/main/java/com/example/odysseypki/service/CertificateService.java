@@ -29,16 +29,17 @@ public class CertificateService {
     private CertificateRepository certificateRepository;
 
     public Certificate create(String parentAlias, String commonName, Date startDate, Date endDate,
-                              Map<Certificate.Extension, List<String>> extensions)
+                              Map<Certificate.Extension, List<String>> extensions, boolean isHttpsCertificate)
             throws IOException, GeneralSecurityException, OperatorCreationException {
         return create(parentAlias, null,
                 new X500Name("CN=" + commonName),
-                startDate, endDate, extensions
+                startDate, endDate, extensions,
+                isHttpsCertificate
         );
     }
 
     public Certificate create(String parentAlias, String alias, X500Name subjectName,
-            Date startDate, Date endDate, Map<Certificate.Extension, List<String>> extensions)
+            Date startDate, Date endDate, Map<Certificate.Extension, List<String>> extensions, boolean isHttpsCertificate)
             throws IOException, GeneralSecurityException, OperatorCreationException {
         var parent = certificateRepository.find(parentAlias);
         if (parent == null)
@@ -62,11 +63,25 @@ public class CertificateService {
                 .withStartDate(startDate)
                 .withEndDate(endDate)
                 .withAlias(alias)
+                .withPrivateKey(isHttpsCertificate ? keyPair.getPrivate() : null)
                 .withExtensions(extensions)
                 .build();
 
         aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
-        return certificateRepository.save(parentAlias, certificate, keyPair.getPrivate());
+        return certificateRepository.save(parentAlias, certificate);
+    }
+
+    public Certificate createHttpsCertificate(String parentAlias, String commonName, Date startDate, Date endDate) throws GeneralSecurityException, IOException, OperatorCreationException {
+        return create(parentAlias, commonName, startDate, endDate,
+                Map.of(
+                        Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
+                        Certificate.Extension.KEY_USAGE, List.of(
+                                Certificate.KeyUsageValue.DIGITAL_SIGNATURE.name(),
+                                Certificate.KeyUsageValue.KEY_ENCIPHERMENT.name(),
+                                Certificate.KeyUsageValue.KEY_AGREEMENT.name()),
+                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
+                        Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()),
+                true);
     }
 
     private boolean keyUsageIsSubset(boolean[] keyUsage, Map<Certificate.Extension, List<String>> extensions) {
@@ -96,7 +111,8 @@ public class CertificateService {
                                     Certificate.KeyUsageValue.KEY_ENCIPHERMENT.name(),
                                     Certificate.KeyUsageValue.KEY_AGREEMENT.name()),
                             Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
-                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of())
+                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()),
+                    true
             );
         } catch (IOException | GeneralSecurityException | OperatorCreationException e) {
             throw new RuntimeException(e);
@@ -122,7 +138,7 @@ public class CertificateService {
                 .build();
 
         aclRepository.save(ROOT_ALIAS, encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
-        certificateRepository.saveRoot(certificate, keyPair.getPrivate());
+        certificateRepository.saveRoot(certificate);
     }
 
     public List<X509Certificate> delete(String alias) throws IOException, GeneralSecurityException {

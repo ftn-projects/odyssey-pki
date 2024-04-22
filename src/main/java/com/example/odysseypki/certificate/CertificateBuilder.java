@@ -27,6 +27,7 @@ public class CertificateBuilder {
     private Date endDate = null;
     private BigInteger serialNumber = null;
     private String alias = null;
+    private PrivateKey privateKey = null;
     private Map<Certificate.Extension, List<String>> extensions = new HashMap<>();
 
     public Certificate build() throws OperatorCreationException, CertificateException, CertIOException {
@@ -36,6 +37,7 @@ public class CertificateBuilder {
         if (startDate == null) startDate = new Date();
         if (serialNumber == null) serialNumber = generateSerialNumber();
         if (alias == null) alias = serialNumber.toString();
+        if (privateKey == null) privateKey = issuer.getPrivateKey();
 
         // BUILDER SETUP
         var builder = new JcaX509v3CertificateBuilder(
@@ -56,6 +58,7 @@ public class CertificateBuilder {
         return new Certificate(
                 subject, issuer,
                 alias, startDate, endDate,
+                privateKey,
                 x509Certificate
         );
     }
@@ -95,8 +98,8 @@ public class CertificateBuilder {
         return this;
     }
 
-    public CertificateBuilder withSerialNumber(BigInteger serialNumber) {
-        this.serialNumber = serialNumber;
+    public CertificateBuilder withPrivateKey(PrivateKey privateKey) {
+        this.privateKey = privateKey;
         return this;
     }
 

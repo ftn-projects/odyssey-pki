@@ -20,7 +20,8 @@ public class CertificateCreationDTO {
     private String commonName;
     private String email;
     private String uid;
-    private Date startDate;
-    private Date endDate;
+    private Long startDate;
+    private Long endDate;
+    private Boolean isHttpsCertificate;
     private Map<Certificate.Extension, List<String>> extensions;
 }
