@@ -8,7 +8,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.*;
 import java.security.Security;
 
 @SpringBootApplication
@@ -18,7 +20,7 @@ public class OdysseyPkiApplication {
 		return new ModelMapper();
 	}
 
-	public static void main(String[] args) throws GeneralSecurityException, IOException {
+	public static void main(String[] args) throws IOException {
 		Security.addProvider(new BouncyCastleProvider());
 		var context = SpringApplication.run(OdysseyPkiApplication.class, args);
 
@@ -27,5 +29,23 @@ public class OdysseyPkiApplication {
 
 		if (properties.isInitializeKeyStore())
 			certificateService.initializeKeyStore();
+
+		// printAclInfo(properties.getKeyStorePath());
+	}
+
+	public static void printAclInfo(String filepath) throws IOException {
+		// Echo ACL
+		var view = Files.getFileAttributeView(Paths.get(filepath), AclFileAttributeView.class);
+
+		for (AclEntry entry : view.getAcl()) {
+			System.out.println("=== flags ===");
+
+			for (AclEntryFlag flags : entry.flags())
+				System.out.println(flags.name());
+
+			System.out.println("=== permissions ===");
+			for (AclEntryPermission permission : entry.permissions())
+				System.out.println(permission.name());
+		}
 	}
 }
