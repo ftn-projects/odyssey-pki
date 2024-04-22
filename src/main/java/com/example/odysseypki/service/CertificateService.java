@@ -20,8 +20,8 @@ import java.util.*;
 public class CertificateService {
     private static final Long ROOT_EXPIRATION_MILLIS = 10 * 365 * 24 * 60 * 60 * 1000L; // 10 years
     private static final String KEY_ALGORITHM = "RSA";
-    private static final String ROOT_ALIAS = "root";
-    private static final String HTTPS_ALIAS = "https-certificate";
+    public static final String ROOT_ALIAS = "root";
+    public static final String HTTPS_ALIAS = "https-certificate";
 
     @Autowired
     private AclRepository aclRepository;

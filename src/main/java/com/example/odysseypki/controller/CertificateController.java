@@ -17,6 +17,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
+@CrossOrigin("http://localhost:4200")
 @RestController
 @RequestMapping(value = "/api/v1/certificates")
 public class CertificateController {
@@ -34,7 +35,7 @@ public class CertificateController {
     }
 
     @GetMapping("/{alias}")
-    public ResponseEntity<?> findByAlias(@PathVariable String alias) throws GeneralSecurityException, IOException, ClassNotFoundException {
+    public ResponseEntity<?> findByAlias(@PathVariable String alias) throws GeneralSecurityException, IOException {
         var certificate = service.find(alias);
 
         if (certificate == null)
@@ -45,10 +46,10 @@ public class CertificateController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
-            IOException, OperatorCreationException, ClassNotFoundException {
+            IOException, OperatorCreationException {
         Certificate created;
 
-        if (dto.getIsHttpsCertificate()) {
+        if (dto.getIsHttpsCertificate() != null && dto.getIsHttpsCertificate()) {
             created = service.createHttpsCertificate(
                     dto.getParentAlias(), dto.getCommonName(),
                     new Date(dto.getStartDate()), new Date(dto.getEndDate())
@@ -64,14 +65,18 @@ public class CertificateController {
     }
 
     @DeleteMapping("/{alias}")
-    public ResponseEntity<?> deleteByAlias(@PathVariable String alias) throws IOException, ClassNotFoundException, GeneralSecurityException {
-        var deleted = service.delete(alias);
-        return new ResponseEntity<>(deleted, HttpStatus.OK);
+    public ResponseEntity<?> deleteByAlias(@PathVariable String alias) throws IOException, GeneralSecurityException {
+        var certificates = new ArrayList<CertificateDTO>();
+
+        for (var certificate : service.delete(alias))
+            certificates.add(mapCertificateToDTO(certificate));
+
+        return new ResponseEntity<>(certificates, HttpStatus.OK);
     }
 
-    private CertificateDTO mapCertificateToDTO(X509Certificate certificate) throws IOException, ClassNotFoundException, CertificateEncodingException {
+    private CertificateDTO mapCertificateToDTO(X509Certificate certificate) throws IOException, CertificateEncodingException {
         var alias = certificate.getSerialNumber().toString();
-        return new CertificateDTO(
+        var dto = new CertificateDTO(
                 alias,
                 service.findParentAlias(alias),
                 mapX500Principal(certificate.getIssuerX500Principal()),
@@ -81,6 +86,13 @@ public class CertificateController {
                 ExtensionMapper.readExtensions(certificate),
                 new CertificateDTO.Signature(certificate)
         );
+        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Https Certificate")) {
+            dto.setSerialNumber(CertificateService.HTTPS_ALIAS);
+            dto.setParentSerialNumber(CertificateService.ROOT_ALIAS);
+        }
+        else if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Root Certificate"))
+            dto.setSerialNumber(CertificateService.ROOT_ALIAS);
+        return dto;
     }
 
     private static Map<String, String> mapX500Principal(X500Principal principal) {

@@ -3,6 +3,7 @@ package com.example.odysseypki.dto;
 import com.example.odysseypki.entity.Certificate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import org.bouncycastle.asn1.x509.Extension;
 
 import java.security.PublicKey;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
+@Setter
 @AllArgsConstructor
 public class CertificateDTO {
     private String serialNumber;

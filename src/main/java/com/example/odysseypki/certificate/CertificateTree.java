@@ -58,7 +58,7 @@ public class CertificateTree implements Serializable {
 
     public List<String> removeAlias(String toBeRemoved){
         if (root == null) {
-            return null;
+            return new ArrayList<>();
         }
         else if (root.getAlias().equals(toBeRemoved)){
             List<String> deletedCertificates = new ArrayList<>();
