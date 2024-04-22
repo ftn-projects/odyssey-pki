@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 public class OdysseyPkiProperties {
     @Value("${ODYSSEY_SECRET}")
     private String secret;
-    @Value("${ODYSEY_KEY_STORE_PASSWORD}")
+    @Value("${ODYSSEY_KEY_STORE_PATH}")
+    private String keyStorePath;
+    @Value("${ODYSSEY_KEY_STORE_PASSWORD}")
     private String keyStorePass;
+    @Value("${ODYSSEY_CREATE_KEYSTORE}")
+    private boolean initializeKeyStore;
 }

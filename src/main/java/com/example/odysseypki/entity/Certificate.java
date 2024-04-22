@@ -15,7 +15,7 @@ import java.util.Date;
 public class Certificate {
     private Subject subject;
     private Issuer issuer;
-    private String serialNumber;
+    private String alias;
     private Date startDate;
     private Date endDate;
     private X509Certificate x509Certificate;
@@ -27,10 +27,6 @@ public class Certificate {
         } catch (CertificateNotYetValidException | CertificateExpiredException e) {
             return false;
         }
-    }
-
-    public String getAlias() {
-        return x509Certificate.getSerialNumber().toString();
     }
 
     public enum Extension {

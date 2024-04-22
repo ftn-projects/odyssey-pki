@@ -50,6 +50,7 @@ public class CertificateController {
             IOException, ClassNotFoundException, OperatorCreationException {
         var created = service.create(
                 dto.getParentAlias(),
+                null,
                 dto.getCommonName(),
                 dto.getEmail(),
                 dto.getUid(),

@@ -19,14 +19,6 @@ public class CertificateTree implements Serializable {
 
     private CertificateNode root;
 
-    public boolean containsAlias(String alias) {
-        return getAllAliases().contains(alias);
-    }
-
-    public String getRootAlias() {
-        return root.getAlias();
-    }
-
     public List<String> getAllAliases() {
         var aliases = new ArrayList<String>();
         dipTraverse(root, node -> aliases.add(node.getAlias()));
@@ -46,8 +38,6 @@ public class CertificateTree implements Serializable {
 
     private void addAlias(String parentAlias, String newAlias, CertificateNode currentNode) {
         if(parentAlias.equals(currentNode.getAlias())) {
-            //Ignore this, this is just for texting -Arezina
-            //System.out.println("Inserting into Alias: " + currentNode.getAlias() + " New Alias: " + newAlias);
             CertificateNode childNode = new CertificateNode(newAlias, currentNode);
             currentNode.addChild(childNode);
 
@@ -149,9 +139,11 @@ public class CertificateTree implements Serializable {
         }
     }
 
-    public static CertificateTree deserialize(String fileName) throws IOException, ClassNotFoundException {
+    public static CertificateTree deserialize(String fileName) throws IOException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fileName))) {
             return (CertificateTree) ois.readObject();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 }
