@@ -9,12 +9,8 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import java.io.Console;
 import java.io.IOException;
 import java.security.*;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -32,15 +28,11 @@ public class CertificateService {
     @Autowired
     private CertificateRepository certificateRepository;
 
-    public Certificate create(
-            String parentAlias, String alias,
-            String commonName, String email, String uid,
-            Date startDate, Date endDate,
-            Map<Certificate.Extension, List<String>> extensions)
+    public Certificate create(String parentAlias, String commonName, Date startDate, Date endDate,
+                              Map<Certificate.Extension, List<String>> extensions)
             throws IOException, GeneralSecurityException, OperatorCreationException {
-        return create(
-                parentAlias, alias,
-                new X500Name("CN=" + commonName + ", E=" + email + ", UID=" + uid),
+        return create(parentAlias, null,
+                new X500Name("CN=" + commonName),
                 startDate, endDate, extensions
         );
     }
@@ -48,12 +40,20 @@ public class CertificateService {
     public Certificate create(String parentAlias, String alias, X500Name subjectName,
             Date startDate, Date endDate, Map<Certificate.Extension, List<String>> extensions)
             throws IOException, GeneralSecurityException, OperatorCreationException {
-        var keyPair = generateKeyPair();
+        var parent = certificateRepository.find(parentAlias);
+        if (parent == null) return null;
+
+        if (parent.getBasicConstraints() < 0)
+            throw new IllegalArgumentException("Parent certificate is not a CA.");
+        if (!keyUsageIsSubset(parent.getKeyUsage(), extensions))
+            throw new IllegalArgumentException("Key usage of the new certificate must be a subset of the parent certificate key usage.");
 
         var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEYS_ACL);
         if (parentPrivateKey == null) return null;
 
-        var parent = certificateRepository.find(parentAlias);
+        var keyPair = generateKeyPair();
+        if (keyPair == null) return null;
+
         var issuerName = new X500Name(parent.getSubjectX500Principal().getName());
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), subjectName)
@@ -68,16 +68,32 @@ public class CertificateService {
         return certificateRepository.save(parentAlias, certificate);
     }
 
+    private boolean keyUsageIsSubset(boolean[] keyUsage, Map<Certificate.Extension, List<String>> extensions) {
+        List<String> keyUsageValues = extensions.get(Certificate.Extension.KEY_USAGE);
+        if (keyUsageValues == null) return true;
+
+        return keyUsageValues.stream().allMatch(usage -> {
+            try {
+                var keyUsageEnum = Certificate.KeyUsageValue.valueOf(usage);
+                return keyUsage[keyUsageEnum.ordinal()];
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        });
+    }
+
     public void initializeKeyStore() {
         try {
             createRoot();
-            var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
             create(ROOT_ALIAS, HTTPS_ALIAS,
-                    new X500Name("CN=Https Certificate, OU=Odyssey PKI, O=Odyssey, L=Novi Sad, C=Serbia"),
+                    new X500Name("CN=Https Certificate"),
                     new Date(), new Date(System.currentTimeMillis() + ROOT_EXPIRATION_MILLIS),
                     Map.of(
-                            Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(true)),
-                            Certificate.Extension.KEY_USAGE, allKeyUsages,
+                            Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
+                            Certificate.Extension.KEY_USAGE, List.of(
+                                    Certificate.KeyUsageValue.DIGITAL_SIGNATURE.name(),
+                                    Certificate.KeyUsageValue.KEY_ENCIPHERMENT.name(),
+                                    Certificate.KeyUsageValue.KEY_AGREEMENT.name()),
                             Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
                             Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of())
             );
@@ -90,9 +106,9 @@ public class CertificateService {
         var keyPair = generateKeyPair();
 
         // SELF SIGNED SO THERE IS NO PARENT PRIVATE KEY
-        var x500Name = new X500Name("CN=Root Certificate, OU=Odyssey PKI, O=Odyssey, L=Novi Sad, C=Serbia");
+        var x500Name = new X500Name("CN=Root Certificate");
         var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
-        var rootCertificate = new CertificateBuilder()
+        var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), x500Name)
                 .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), x500Name)
                 .withExpiration(ROOT_EXPIRATION_MILLIS)
@@ -100,11 +116,12 @@ public class CertificateService {
                 .withExtensions(Map.of(
                         Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(true)),
                         Certificate.Extension.KEY_USAGE, allKeyUsages,  // ROOT CERTIFICATE CAN PERFORM ALL ACTIONS
-                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of()))
+                        Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of()
+                ))
                 .build();
 
-        aclRepository.save(rootCertificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
-        certificateRepository.saveRoot(rootCertificate);
+        aclRepository.save(ROOT_ALIAS, encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
+        certificateRepository.saveRoot(certificate);
     }
 
     public List<X509Certificate> delete(String alias) throws IOException, GeneralSecurityException {

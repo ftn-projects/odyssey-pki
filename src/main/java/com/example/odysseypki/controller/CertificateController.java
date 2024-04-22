@@ -47,13 +47,10 @@ public class CertificateController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
-            IOException, ClassNotFoundException, OperatorCreationException {
+            IOException, OperatorCreationException {
         var created = service.create(
                 dto.getParentAlias(),
-                null,
                 dto.getCommonName(),
-                dto.getEmail(),
-                dto.getUid(),
                 dto.getStartDate(),
                 dto.getEndDate(),
                 dto.getExtensions()
