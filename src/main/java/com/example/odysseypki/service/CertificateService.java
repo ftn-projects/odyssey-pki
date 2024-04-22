@@ -41,7 +41,8 @@ public class CertificateService {
             Date startDate, Date endDate, Map<Certificate.Extension, List<String>> extensions)
             throws IOException, GeneralSecurityException, OperatorCreationException {
         var parent = certificateRepository.find(parentAlias);
-        if (parent == null) return null;
+        if (parent == null)
+            throw new IllegalArgumentException("Parent certificate with provided alias does not exist.");
 
         if (parent.getBasicConstraints() < 0)
             throw new IllegalArgumentException("Parent certificate is not a CA.");
@@ -65,7 +66,7 @@ public class CertificateService {
                 .build();
 
         aclRepository.save(certificate.getAlias(), encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
-        return certificateRepository.save(parentAlias, certificate);
+        return certificateRepository.save(parentAlias, certificate, keyPair.getPrivate());
     }
 
     private boolean keyUsageIsSubset(boolean[] keyUsage, Map<Certificate.Extension, List<String>> extensions) {
@@ -121,7 +122,7 @@ public class CertificateService {
                 .build();
 
         aclRepository.save(ROOT_ALIAS, encodePrivateKey(keyPair.getPrivate()), AclRepository.PRIVATE_KEYS_ACL);
-        certificateRepository.saveRoot(certificate);
+        certificateRepository.saveRoot(certificate, keyPair.getPrivate());
     }
 
     public List<X509Certificate> delete(String alias) throws IOException, GeneralSecurityException {
@@ -154,7 +155,7 @@ public class CertificateService {
         }
     }
 
-    public static PrivateKey decodePrivateKey(String key) {
+    private static PrivateKey decodePrivateKey(String key) {
         try {
             var keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(key));
             var kf = KeyFactory.getInstance(KEY_ALGORITHM);
@@ -164,7 +165,7 @@ public class CertificateService {
         }
     }
 
-    public static String encodePrivateKey(PrivateKey key) {
+    private static String encodePrivateKey(PrivateKey key) {
         try {
             var kf = KeyFactory.getInstance(KEY_ALGORITHM);
             var keySpec = kf.getKeySpec(key, PKCS8EncodedKeySpec.class);

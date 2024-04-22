@@ -23,13 +23,12 @@ public class KeyStoreRepository {
     @Autowired
     private OdysseyPkiProperties properties;
 
-    public void save(Certificate certificate) throws IOException, CertificateException, KeyStoreException {
+    public void save(Certificate certificate, PrivateKey key) throws IOException, CertificateException, KeyStoreException {
         var ks = loadKeyStore();
 
         ks.setKeyEntry(
                 certificate.getAlias(),
-                certificate.getIssuer().getPrivateKey(),
-                getPassword(),
+                key, getPassword(),
                 new java.security.cert.Certificate[] {certificate.getX509Certificate()}
         );
 
