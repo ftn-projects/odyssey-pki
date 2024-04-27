@@ -5,6 +5,7 @@ import com.example.odysseypki.entity.Issuer;
 import com.example.odysseypki.entity.Subject;
 import lombok.NoArgsConstructor;
 import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.CertIOException;
@@ -18,6 +19,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.util.*;
+import java.util.stream.Collector;
 
 @NoArgsConstructor
 public class CertificateBuilder {
@@ -125,6 +127,14 @@ public class CertificateBuilder {
             case AUTHORITY_KEY_IDENTIFIER:
                 builder.addExtension(Extension.authorityKeyIdentifier, false,
                         new AuthorityKeyIdentifier(issuer.getPublicKey().getEncoded()));
+                return;
+            case SUBJECT_ALTERNATIVE_NAME:
+                var names = new GeneralName[values.size()];
+                for (int i = 0; i < values.size(); ++i)
+                    names[i] = new GeneralName(GeneralName.dNSName, values.get(i));
+
+                builder.addExtension(Extension.subjectAlternativeName, false,
+                    new DERSequence(names));
         }
     }
 

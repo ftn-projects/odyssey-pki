@@ -35,7 +35,8 @@ public class Certificate {
         BASIC_CONSTRAINTS,
         KEY_USAGE,
         SUBJECT_KEY_IDENTIFIER,
-        AUTHORITY_KEY_IDENTIFIER
+        AUTHORITY_KEY_IDENTIFIER,
+        SUBJECT_ALTERNATIVE_NAME
     }
 
     @Getter

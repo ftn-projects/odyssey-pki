@@ -103,7 +103,7 @@ public class CertificateService {
         try {
             createRoot();
             create(ROOT_ALIAS, HTTPS_ALIAS,
-                    new X500Name("CN=Https Certificate"),
+                    new X500Name("CN=localhost"),
                     new Date(), new Date(System.currentTimeMillis() + ROOT_EXPIRATION_MILLIS),
                     Map.of(
                             Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
@@ -112,7 +112,8 @@ public class CertificateService {
                                     Certificate.KeyUsageValue.KEY_ENCIPHERMENT.name(),
                                     Certificate.KeyUsageValue.KEY_AGREEMENT.name()),
                             Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
-                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()),
+                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of(),
+                            Certificate.Extension.SUBJECT_ALTERNATIVE_NAME, List.of("localhost", "*localhost")),
                     true
             );
         } catch (IOException | GeneralSecurityException | OperatorCreationException e) {
@@ -124,7 +125,7 @@ public class CertificateService {
         var keyPair = generateKeyPair();
 
         // SELF SIGNED SO THERE IS NO PARENT PRIVATE KEY
-        var x500Name = new X500Name("CN=Root Certificate");
+        var x500Name = new X500Name("CN=Odyssey PKI Root");
         var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), x500Name)
