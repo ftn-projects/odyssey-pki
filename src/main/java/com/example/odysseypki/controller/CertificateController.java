@@ -27,7 +27,7 @@ public class CertificateController {
     private CertificateService service;
 
     @GetMapping
-    public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
+    public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException {
         var certificates = new ArrayList<CertificateDTO>();
 
         for (var certificate : service.findAll())
@@ -46,58 +46,41 @@ public class CertificateController {
         return new ResponseEntity<>(mapCertificateToDTO(certificate), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/download/{name}/{surname}", produces = "application/x-x509-ca-cert")
-    public ResponseEntity<byte[]> findByCommonName(@PathVariable String name, @PathVariable String surname) {
-        try {
-            var certificate = service.findByCommonName(
-                    name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
-            );
+    @GetMapping(value = "/download/{uid}", produces = "application/x-x509-ca-cert")
+    public ResponseEntity<byte[]> findByCommonName(@PathVariable Long uid) throws CertificateEncodingException {
+        var certificate = service.findByUid(uid);
 
-            if (certificate == null)
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        if (certificate == null)
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
-            // Get bytes from certificate
-            byte[] certBytes = certificate.getEncoded();
+        // Get bytes from certificate
+        byte[] certBytes = certificate.getEncoded();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType("application/x-x509-ca-cert"));
-            headers.setContentDispositionFormData("attachment", "certificate.cer");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/x-x509-ca-cert"));
+        headers.setContentDispositionFormData("attachment", "certificate.cer");
 
-            return new ResponseEntity<>(certBytes, headers, HttpStatus.OK);
-        } catch (CertificateEncodingException e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return new ResponseEntity<>(certBytes, headers, HttpStatus.OK);
     }
 
-    @GetMapping("/has/{name}/{surname}")
-    public ResponseEntity<?> hasCertificate(@PathVariable String name, @PathVariable String surname) throws GeneralSecurityException, IOException {
-        var certificate = service.findByCommonName(
-                name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
-        );
+    @GetMapping("/has/{uid}")
+    public ResponseEntity<?> hasCertificate(@PathVariable Long uid) throws GeneralSecurityException, IOException {
+        var certificate = service.findByUid(uid);
         return new ResponseEntity<>(certificate != null, HttpStatus.OK);
     }
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
             IOException, OperatorCreationException {
-        Certificate created;
 
-        if (dto.getIsHttpsCertificate() != null && dto.getIsHttpsCertificate()) {
-            created = service.createHttpsCertificate(
-                    dto.getParentAlias(), dto.getCommonName(),
-                    new Date(dto.getStartDate()), new Date(dto.getEndDate())
-            );
-        } else {
-            created = service.create(
-                    dto.getParentAlias(), dto.getCommonName(),
-                    new Date(dto.getStartDate()), new Date(dto.getEndDate()),
-                    dto.getExtensions(), false
-            );
-        }
+        var builder = service.getCertificateBuilder(dto.getParentAlias(),
+                Map.of("CN", dto.getCommonName())); // TODO refactor build procedure
+
+        var created = builder.build();
+
+        service.save(created);
+
+        // If the certificate is an HTTPS certificate, create it with the HTTPS flag
         return new ResponseEntity<>(mapCertificateToDTO(created.getX509Certificate()), HttpStatus.CREATED);
     }
 

@@ -3,9 +3,8 @@ package com.example.odysseypki.certificate;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.entity.Issuer;
 import com.example.odysseypki.entity.Subject;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -15,7 +14,6 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 import java.math.BigInteger;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.util.*;
 
@@ -23,21 +21,33 @@ import java.util.*;
 public class CertificateBuilder {
     private Subject subject = null;
     private Issuer issuer = null;
+    private PrivateKey privateKey = null;
+    @Getter
+    private String parentAlias = null;
+    private BigInteger serialNumber = null;
     private Date startDate = null;
     private Date endDate = null;
-    private BigInteger serialNumber = null;
     private String alias = null;
-    private PrivateKey privateKey = null;
-    private Map<Certificate.Extension, List<String>> extensions = new HashMap<>();
+    private Boolean isHttps = false, isCa = false, isRoot = false;
+    private List<String> keyUsages = new ArrayList<>();
+
+    public CertificateBuilder(Subject subject, Issuer issuer, PrivateKey privateKey, String parentAlias) {
+        this.subject = subject;
+        this.issuer = issuer;
+        this.privateKey = privateKey;
+        this.parentAlias = parentAlias;
+    }
 
     public Certificate build() throws OperatorCreationException, CertificateException, CertIOException {
         // FIELD VALIDATION
-        if (subject == null || issuer == null || endDate == null)
-            throw new IllegalArgumentException("Missing required fields");
+        if (endDate == null)
+            throw new IllegalArgumentException("Missing end date or expiration");
+        if (isHttps && isCa)
+            throw new IllegalArgumentException("HTTPS certificates cannot be CA certificates");
+        if (!isHttps) privateKey = issuer.getPrivateKey();
         if (startDate == null) startDate = new Date();
         if (serialNumber == null) serialNumber = generateSerialNumber();
         if (alias == null) alias = serialNumber.toString();
-        if (privateKey == null) privateKey = issuer.getPrivateKey();
 
         // BUILDER SETUP
         var builder = new JcaX509v3CertificateBuilder(
@@ -46,9 +56,7 @@ public class CertificateBuilder {
                 subject.getX500Name(),
                 subject.getPublicKey());
 
-        // ADDING EXTENSIONS
-        for (var entry : extensions.entrySet())
-            buildExtension(builder, entry.getKey(), entry.getValue());
+        addExtensions(builder);
 
         var signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption")
                 .setProvider("BC").build(issuer.getPrivateKey());
@@ -58,7 +66,7 @@ public class CertificateBuilder {
         return new Certificate(
                 subject, issuer,
                 alias, startDate, endDate,
-                privateKey,
+                privateKey, parentAlias,
                 x509Certificate
         );
     }
@@ -67,15 +75,6 @@ public class CertificateBuilder {
         return BigInteger.valueOf(System.currentTimeMillis());
     }
 
-    public CertificateBuilder withSubject(PublicKey key, X500Name x500Name) {
-        subject = new Subject(key, x500Name);
-        return this;
-    }
-
-    public CertificateBuilder withIssuer(PrivateKey privateKey, PublicKey publicKey, X500Name x500Name) {
-        issuer = new Issuer(privateKey, publicKey, x500Name);
-        return this;
-    }
 
     public CertificateBuilder withStartDate(Date startDate) {
         this.startDate = startDate;
@@ -98,69 +97,71 @@ public class CertificateBuilder {
         return this;
     }
 
-    public CertificateBuilder withPrivateKey(PrivateKey privateKey) {
-        this.privateKey = privateKey;
+    public CertificateBuilder isHttpsCertificate(boolean b) {
+        this.isHttps = b;
         return this;
     }
 
-    public CertificateBuilder withExtensions(Map<Certificate.Extension, List<String>> extensions) {
-        this.extensions = extensions;
+    public CertificateBuilder isCertificateAuthority(boolean b) {
+        this.isCa = b;
         return this;
     }
 
-    private void buildExtension(JcaX509v3CertificateBuilder builder, Certificate.Extension extension, List<String> values) throws CertIOException {
-        switch (extension) {
-            case BASIC_CONSTRAINTS:
-                builder.addExtension(Extension.basicConstraints, true,
-                        new BasicConstraints(values.get(0).equalsIgnoreCase("true")));
-                return;
-            case KEY_USAGE:
-                builder.addExtension(Extension.keyUsage, true,
-                        new KeyUsage(mapKeyUsage(values)));
-                return;
-            case SUBJECT_KEY_IDENTIFIER:
-                builder.addExtension(Extension.subjectKeyIdentifier, false,
-                        new SubjectKeyIdentifier(subject.getPublicKey().getEncoded()));
-                return;
-            case AUTHORITY_KEY_IDENTIFIER:
-                builder.addExtension(Extension.authorityKeyIdentifier, false,
-                        new AuthorityKeyIdentifier(issuer.getPublicKey().getEncoded()));
-        }
+    public CertificateBuilder isRootCertificate(boolean b) {
+        this.isCa = b;
+        this.isRoot = b;
+        return this;
     }
 
-    private int mapKeyUsage(List<String> values) {
-        int keyUsage = 0;
-        for (var value : values) {
-            switch (Certificate.KeyUsageValue.valueOf(value)) {
+    public CertificateBuilder withKeyUsages(List<String> keyUsages) {
+        this.keyUsages = keyUsages;
+        return this;
+    }
+
+    private void addExtensions(JcaX509v3CertificateBuilder builder) throws CertIOException {
+        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(isCa));
+        builder.addExtension(Extension.keyUsage, true, new KeyUsage(mapKeyUsages()));
+
+        if (!isRoot)
+            builder.addExtension(Extension.authorityKeyIdentifier, false,
+                    new AuthorityKeyIdentifier(issuer.getPublicKey().getEncoded()));
+        builder.addExtension(Extension.subjectKeyIdentifier, false,
+                new SubjectKeyIdentifier(subject.getPublicKey().getEncoded()));
+    }
+
+    private int mapKeyUsages() {
+        int encoded = 0;
+        for (var usage : keyUsages) {
+            var usageValue = Certificate.KeyUsageValue.valueOf(usage);
+            switch (usageValue) {
                 case DIGITAL_SIGNATURE:
-                    keyUsage |= KeyUsage.digitalSignature;
+                    encoded |= KeyUsage.digitalSignature;
                     break;
                 case NON_REPUDIATION:
-                    keyUsage |= KeyUsage.nonRepudiation;
+                    encoded |= KeyUsage.nonRepudiation;
                     break;
                 case KEY_ENCIPHERMENT:
-                    keyUsage |= KeyUsage.keyEncipherment;
+                    if (isCa) throw new InvalidKeyUsageException("CA", usageValue.getDescription());
+                    encoded |= KeyUsage.keyEncipherment;
                     break;
                 case DATA_ENCIPHERMENT:
-                    keyUsage |= KeyUsage.dataEncipherment;
+                    if (isCa) throw new InvalidKeyUsageException("CA", usageValue.getDescription());
+                    encoded |= KeyUsage.dataEncipherment;
                     break;
                 case KEY_AGREEMENT:
-                    keyUsage |= KeyUsage.keyAgreement;
+                    if (isCa) throw new InvalidKeyUsageException("CA", usageValue.getDescription());
+                    encoded |= KeyUsage.keyAgreement;
                     break;
                 case CERTIFICATE_SIGN:
-                    keyUsage |= KeyUsage.keyCertSign;
+                    if (!isCa) throw new InvalidKeyUsageException("EE", usageValue.getDescription());
+                    encoded |= KeyUsage.keyCertSign;
                     break;
                 case CRL_SIGN:
-                    keyUsage |= KeyUsage.cRLSign;
-                    break;
-                case ENCIPHER_ONLY:
-                    keyUsage |= KeyUsage.encipherOnly;
-                    break;
-                case DECIPHER_ONLY:
-                    keyUsage |= KeyUsage.decipherOnly;
+                    if (!isCa) throw new InvalidKeyUsageException("EE", usageValue.getDescription());
+                    encoded |= KeyUsage.cRLSign;
                     break;
             }
         }
-        return keyUsage;
+        return encoded;
     }
 }

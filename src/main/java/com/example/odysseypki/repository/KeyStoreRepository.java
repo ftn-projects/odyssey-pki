@@ -16,6 +16,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class KeyStoreRepository {
@@ -25,42 +26,31 @@ public class KeyStoreRepository {
 
     public void save(Certificate certificate) throws IOException, CertificateException, KeyStoreException {
         var ks = loadKeyStore();
-
         ks.setKeyEntry(
                 certificate.getAlias(),
                 certificate.getPrivateKey(), getPassword(),
                 new java.security.cert.Certificate[] {certificate.getX509Certificate()}
         );
-
         saveKeyStore(ks);
     }
 
-    public X509Certificate delete(String alias) throws IOException, CertificateException, KeyStoreException {
+    public Optional<X509Certificate> delete(String alias) throws IOException, CertificateException, KeyStoreException {
         var certificate = load(alias);
-
         var ks = loadKeyStore();
         ks.deleteEntry(alias);
         saveKeyStore(ks);
-
         return certificate;
     }
 
-    public X509Certificate load(String alias) throws IOException, CertificateException, KeyStoreException {
+    public Optional<X509Certificate> load(String alias) throws IOException, CertificateException, KeyStoreException {
         var ks = loadKeyStore();
-
         if (ks.isKeyEntry(alias))
-            return (X509Certificate) ks.getCertificate(alias);
-
-        return null;
+            return Optional.ofNullable((X509Certificate) ks.getCertificate(alias));
+        return Optional.empty();
     }
 
-    public List<X509Certificate> loadAll(List<String> aliases) throws IOException, CertificateException, KeyStoreException {
-        var certificates = new ArrayList<X509Certificate>();
-
-        for (var a : aliases)
-            certificates.add(load(a));
-
-        return certificates;
+    public boolean contains(String alias) throws IOException, CertificateException, KeyStoreException {
+        return load(alias).isPresent();
     }
 
     private KeyStore loadKeyStore() throws IOException, CertificateException {

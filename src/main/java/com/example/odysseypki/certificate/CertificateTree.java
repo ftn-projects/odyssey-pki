@@ -56,7 +56,7 @@ public class CertificateTree implements Serializable {
         return new CertificateTree(new CertificateNode(rootAlias));
     }
 
-    public List<String> removeAlias(String toBeRemoved){
+    public List<String> removeAliasAndSubtree(String toBeRemoved){
         if (root == null) {
             return new ArrayList<>();
         }
@@ -71,10 +71,10 @@ public class CertificateTree implements Serializable {
             return deletedCertificates;
         }
         else {
-            return removeAlias(toBeRemoved, this.root);
+            return removeAliasAndSubtree(toBeRemoved, this.root);
         }
     }
-    private List<String> removeAlias(String toBeRemoved, CertificateNode currentNode){
+    private List<String> removeAliasAndSubtree(String toBeRemoved, CertificateNode currentNode){
 
         if(currentNode.getAlias().equals(toBeRemoved)){
             CertificateNode parent = currentNode.getParent();
@@ -87,7 +87,7 @@ public class CertificateTree implements Serializable {
         }
 
         for(CertificateNode childNode : currentNode.getChildren()){
-            var returns = removeAlias(toBeRemoved, childNode);
+            var returns = removeAliasAndSubtree(toBeRemoved, childNode);
             if(returns!=null)
                 return returns;
         }

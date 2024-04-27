@@ -20,6 +20,7 @@ public class Certificate {
     private Date startDate;
     private Date endDate;
     private PrivateKey privateKey;
+    private String parentAlias;
     private X509Certificate x509Certificate;
 
     public boolean isValid() {
@@ -47,9 +48,7 @@ public class Certificate {
         DATA_ENCIPHERMENT("Data Encipherment"),
         KEY_AGREEMENT("Key Agreement"),
         CERTIFICATE_SIGN("Certificate Signer"),
-        CRL_SIGN("CRL Signer"),
-        ENCIPHER_ONLY("Encipher Only"),
-        DECIPHER_ONLY("Decipher Only");
+        CRL_SIGN("CRL Signer");
 
         private final String description;
     }

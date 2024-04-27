@@ -1,16 +1,17 @@
 package com.example.odysseypki.repository;
 
 import com.example.odysseypki.certificate.CertificateTree;
+import com.example.odysseypki.certificate.InconsistentTreeException;
 import com.example.odysseypki.entity.Certificate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.PrivateKey;
+import java.security.KeyStoreException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -30,21 +31,26 @@ public class CertificateRepository {
         return certificate;
     }
 
-    public void saveRoot(Certificate certificate) throws IOException, GeneralSecurityException {
+    public void saveRoot(Certificate root) throws IOException, GeneralSecurityException {
         keyStoreRepository.createKeyStore();
-        keyStoreRepository.save(certificate);
+        keyStoreRepository.save(root);
 
-        var tree = CertificateTree.createTree(certificate.getAlias());
+        var tree = CertificateTree.createTree(root.getAlias());
         tree.serialize(ALIAS_TREE_PATH);
     }
 
-    public X509Certificate find(String alias) throws IOException, GeneralSecurityException {
-        return keyStoreRepository.load(alias);
+    public X509Certificate findByAlias(String alias) throws IOException, GeneralSecurityException {
+        return keyStoreRepository.load(alias).orElseThrow();
     }
 
-    public List<X509Certificate> findAll() throws IOException, GeneralSecurityException {
+    public List<X509Certificate> findAll() throws IOException, CertificateException, KeyStoreException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
-        return keyStoreRepository.loadAll(tree.getAllAliases());
+        var certificates = new ArrayList<X509Certificate>();
+
+        for (var a : tree.getAllAliases())
+            certificates.add(keyStoreRepository.load(a)
+                    .orElseThrow(() -> new InconsistentTreeException(a)));
+        return certificates;
     }
 
     public String findParentAlias(String alias) throws IOException {
@@ -54,11 +60,15 @@ public class CertificateRepository {
 
     public List<X509Certificate> delete(String alias) throws IOException, GeneralSecurityException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
-        var aliasesForDeletion = tree.removeAlias(alias);
-        var deleted = new ArrayList<X509Certificate>();
 
+        // Transactional behavior (delete all or none)
+        var aliasesForDeletion = tree.removeAliasAndSubtree(alias);
         for (var a : aliasesForDeletion)
-            deleted.add(keyStoreRepository.delete(a));
+            if (!keyStoreRepository.contains(a)) throw new InconsistentTreeException(a);
+
+        var deleted = new ArrayList<X509Certificate>();
+        for (var a : aliasesForDeletion)
+            deleted.add(keyStoreRepository.delete(a).orElseThrow());
 
         tree.serialize(ALIAS_TREE_PATH);
         return deleted;
