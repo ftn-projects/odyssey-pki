@@ -39,13 +39,7 @@ public class X500NameFormatter {
 
         @Override
         public int compare(String o1, String o2) {
-            if (OrderedNames.contains(o1) && OrderedNames.contains(o2))
-                return OrderedNames.indexOf(o1) - OrderedNames.indexOf(o2);
-            if (OrderedNames.contains(o1))
-                return -1;
-            if (OrderedNames.contains(o2))
-                return 1;
-            return o1.compareTo(o2);
+            return OrderedNames.indexOf(o1) - OrderedNames.indexOf(o2);
         }
     }
 }

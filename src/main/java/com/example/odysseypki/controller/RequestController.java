@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin("http://localhost:4200")
+@CrossOrigin("https://localhost:4200")
 @RestController
 @RequestMapping(value = "/api/v1/requests")
 public class RequestController {

@@ -4,6 +4,7 @@ import com.example.odysseypki.dto.CertificateCreationDTO;
 import com.example.odysseypki.dto.CertificateDTO;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.service.CertificateService;
+import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -19,7 +20,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-@CrossOrigin("http://localhost:4200")
+@CrossOrigin("https://localhost:4200")
 @RestController
 @RequestMapping(value = "/api/v1/certificates")
 public class CertificateController {
@@ -59,6 +60,15 @@ public class CertificateController {
             // Get bytes from certificate
             byte[] certBytes = certificate.getEncoded();
 
+
+            //            // dodavanje signature ovde
+//            sign = sifra(hash(bajtova));
+//
+//            // provera na frontu pre nego sto skine podatke
+//            desifrovano = desifruj(sign, javniKljucHttps);
+//            hash(primljenih bajtova) == desifrovano;
+
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/x-x509-ca-cert"));
             headers.setContentDispositionFormData("attachment", "certificate.cer");
@@ -75,6 +85,7 @@ public class CertificateController {
 
     @GetMapping("/has/{name}/{surname}")
     public ResponseEntity<?> hasCertificate(@PathVariable String name, @PathVariable String surname) throws GeneralSecurityException, IOException {
+        // TODO check by using database
         var certificate = service.findByCommonName(
                 name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
         );
@@ -123,11 +134,17 @@ public class CertificateController {
                 ExtensionMapper.readExtensions(certificate),
                 new CertificateDTO.Signature(certificate)
         );
-        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Https Certificate")) {
+
+        // TODO please fix this hack (additional table in database)
+        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("localhost")) {
             dto.setSerialNumber(CertificateService.HTTPS_ALIAS);
+            dto.setParentSerialNumber("middle");
+        }
+        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Odyssey PKI Middle")) {
+            dto.setSerialNumber("middle");
             dto.setParentSerialNumber(CertificateService.ROOT_ALIAS);
         }
-        else if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Root Certificate"))
+        else if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Odyssey PKI Root"))
             dto.setSerialNumber(CertificateService.ROOT_ALIAS);
         return dto;
     }
