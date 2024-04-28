@@ -60,23 +60,7 @@ public class CertificateController {
             // Get bytes from certificate
             byte[] certBytes = certificate.getEncoded();
 
-
-            //            // dodavanje signature ovde
-//            sign = sifra(hash(bajtova));
-//
-//            // provera na frontu pre nego sto skine podatke
-//            desifrovano = desifruj(sign, javniKljucHttps);
-//            hash(primljenih bajtova) == desifrovano;
-
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType("application/x-x509-ca-cert"));
-            headers.setContentDispositionFormData("attachment", "certificate.cer");
-
-            return new ResponseEntity<>(certBytes, headers, HttpStatus.OK);
-        } catch (CertificateEncodingException e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(certBytes, HttpStatus.OK);
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -96,8 +80,8 @@ public class CertificateController {
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
             IOException, OperatorCreationException {
         Certificate created;
-
-        if (dto.getIsHttpsCertificate() != null && dto.getIsHttpsCertificate()) {
+        // TODO make it work
+        if (dto.getIsHttps() != null && dto.getIsHttps()) {
             created = service.createHttpsCertificate(
                     dto.getParentAlias(), dto.getCommonName(),
                     new Date(dto.getStartDate()), new Date(dto.getEndDate())
@@ -106,7 +90,7 @@ public class CertificateController {
             created = service.create(
                     dto.getParentAlias(), dto.getCommonName(),
                     new Date(dto.getStartDate()), new Date(dto.getEndDate()),
-                    dto.getExtensions(), false
+                    new HashMap<>(), false
             );
         }
         return new ResponseEntity<>(mapCertificateToDTO(created.getX509Certificate()), HttpStatus.CREATED);

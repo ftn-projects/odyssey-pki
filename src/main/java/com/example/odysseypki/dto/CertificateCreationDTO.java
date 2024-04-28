@@ -18,10 +18,10 @@ import java.util.Map;
 public class CertificateCreationDTO {
     private String parentAlias;
     private String commonName;
-    private String email;
-    private String uid;
+    private String uid; // id ulogovanog usera (saljemo null ako admin pravi CA ili https ili sta god)
     private Long startDate;
     private Long endDate;
-    private Boolean isHttpsCertificate;
-    private Map<Certificate.Extension, List<String>> extensions;
+    private Boolean isCa;
+    private Boolean isHttps;
+    private List<String> keyUsages;
 }

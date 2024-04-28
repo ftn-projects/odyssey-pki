@@ -32,25 +32,25 @@ public class Certificate {
     }
 
     public enum Extension {
-        BASIC_CONSTRAINTS,
-        KEY_USAGE,
-        SUBJECT_KEY_IDENTIFIER,
-        AUTHORITY_KEY_IDENTIFIER,
-        SUBJECT_ALTERNATIVE_NAME
+        BASIC_CONSTRAINTS, // da li je CA => true/false
+        KEY_USAGE, // iz enuma ispod
+        SUBJECT_KEY_IDENTIFIER, // automatic na backu
+        AUTHORITY_KEY_IDENTIFIER, // automatic na backu
+        SUBJECT_ALTERNATIVE_NAME // automatic na backu
     }
 
     @Getter
     @AllArgsConstructor
-    public enum KeyUsageValue {
-        DIGITAL_SIGNATURE("Digital Signature"),
-        NON_REPUDIATION("Non-Repudiation"),
-        KEY_ENCIPHERMENT("Key Encipherment"),
-        DATA_ENCIPHERMENT("Data Encipherment"),
-        KEY_AGREEMENT("Key Agreement"),
-        CERTIFICATE_SIGN("Certificate Signer"),
-        CRL_SIGN("CRL Signer"),
-        ENCIPHER_ONLY("Encipher Only"),
-        DECIPHER_ONLY("Decipher Only");
+    public enum KeyUsageValue { // https => non CA
+        DIGITAL_SIGNATURE("Digital Signature"), // uvek
+        NON_REPUDIATION("Non-Repudiation"), // uvek
+        KEY_ENCIPHERMENT("Key Encipherment"), // non CA
+        DATA_ENCIPHERMENT("Data Encipherment"), // non CA
+        KEY_AGREEMENT("Key Agreement"), // non CA
+        CERTIFICATE_SIGN("Certificate Signer"), // CA
+        CRL_SIGN("CRL Signer"), // CA
+        ENCIPHER_ONLY("Encipher Only"), // izbacujemo
+        DECIPHER_ONLY("Decipher Only"); // izbacujemo
 
         private final String description;
     }
