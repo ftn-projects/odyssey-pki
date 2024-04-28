@@ -10,6 +10,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.X509Certificate;
@@ -48,8 +49,6 @@ public class CertificateService {
 
         if (parent.getBasicConstraints() < 0)
             throw new IllegalArgumentException("Parent certificate is not a CA.");
-        if (!keyUsageIsSubset(parent.getKeyUsage(), extensions))
-            throw new IllegalArgumentException("Key usage of the new certificate must be a subset of the parent certificate key usage.");
 
         var parentPrivateKey = aclRepository.load(parentAlias, AclRepository.PRIVATE_KEYS_ACL);
         if (parentPrivateKey == null) return null;
@@ -57,7 +56,7 @@ public class CertificateService {
         var keyPair = generateKeyPair();
         if (keyPair == null) return null;
 
-        var issuerName = new X500Name(parent.getSubjectX500Principal().getName());
+        var issuerName = X500NameFormatter.format(parent.getSubjectX500Principal());
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), subjectName)
                 .withIssuer(decodePrivateKey(parentPrivateKey), parent.getPublicKey(), issuerName)
@@ -102,8 +101,19 @@ public class CertificateService {
     public void initializeKeyStore() {
         try {
             createRoot();
-            create(ROOT_ALIAS, HTTPS_ALIAS,
-                    new X500Name("CN=localhost"),
+            create(ROOT_ALIAS, "middle",
+                    X500NameFormatter.format("CN=Odyssey PKI Middle, O=Odyssey, UID=999, OU=Odyssey PKI, L=Novi Sad, C=Serbia"),
+                    new Date(), new Date(System.currentTimeMillis() + ROOT_EXPIRATION_MILLIS),
+                    Map.of(
+                            Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(true)),
+                            Certificate.Extension.KEY_USAGE, List.of(
+                                    Certificate.KeyUsageValue.CERTIFICATE_SIGN.name(),
+                                    Certificate.KeyUsageValue.CRL_SIGN.name()),
+                            Certificate.Extension.SUBJECT_KEY_IDENTIFIER, List.of(),
+                            Certificate.Extension.AUTHORITY_KEY_IDENTIFIER, List.of()),
+                    false);
+            create("middle", HTTPS_ALIAS,
+                    X500NameFormatter.format("CN=localhost, O=Odyssey, OU=Odyssey PKI, L=Novi Sad, C=Serbia"),
                     new Date(), new Date(System.currentTimeMillis() + ROOT_EXPIRATION_MILLIS),
                     Map.of(
                             Certificate.Extension.BASIC_CONSTRAINTS, List.of(String.valueOf(false)),
@@ -125,11 +135,11 @@ public class CertificateService {
         var keyPair = generateKeyPair();
 
         // SELF SIGNED SO THERE IS NO PARENT PRIVATE KEY
-        var x500Name = new X500Name("CN=Odyssey PKI Root");
+        var dn = X500NameFormatter.format("CN=Odyssey PKI Root, O=Odyssey, OU=Odyssey PKI, L=Novi Sad, C=Serbia");
         var allKeyUsages = Arrays.stream(Certificate.KeyUsageValue.values()).map(Certificate.KeyUsageValue::name).toList();
         var certificate = new CertificateBuilder()
-                .withSubject(keyPair.getPublic(), x500Name)
-                .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), x500Name)
+                .withSubject(keyPair.getPublic(), dn)
+                .withIssuer(keyPair.getPrivate(), keyPair.getPublic(), dn)
                 .withExpiration(ROOT_EXPIRATION_MILLIS)
                 .withAlias(ROOT_ALIAS)
                 .withExtensions(Map.of(
