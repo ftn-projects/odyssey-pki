@@ -18,7 +18,8 @@ import java.util.Map;
 public class CertificateCreationDTO {
     private String parentAlias;
     private String commonName;
-    private String uid; // id ulogovanog usera (saljemo null ako admin pravi CA ili https ili sta god)
+    private String uid;
+    private String email;
     private Long startDate;
     private Long endDate;
     private Boolean isCa;

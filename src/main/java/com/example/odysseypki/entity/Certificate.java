@@ -22,15 +22,6 @@ public class Certificate {
     private PrivateKey privateKey;
     private X509Certificate x509Certificate;
 
-    public boolean isValid() {
-        try {
-            x509Certificate.checkValidity();
-            return true;
-        } catch (CertificateNotYetValidException | CertificateExpiredException e) {
-            return false;
-        }
-    }
-
     public enum Extension {
         BASIC_CONSTRAINTS, // da li je CA => true/false
         KEY_USAGE, // iz enuma ispod
@@ -48,9 +39,7 @@ public class Certificate {
         DATA_ENCIPHERMENT("Data Encipherment"), // non CA
         KEY_AGREEMENT("Key Agreement"), // non CA
         CERTIFICATE_SIGN("Certificate Signer"), // CA
-        CRL_SIGN("CRL Signer"), // CA
-        ENCIPHER_ONLY("Encipher Only"), // izbacujemo
-        DECIPHER_ONLY("Decipher Only"); // izbacujemo
+        CRL_SIGN("CRL Signer"); // CA
 
         private final String description;
     }

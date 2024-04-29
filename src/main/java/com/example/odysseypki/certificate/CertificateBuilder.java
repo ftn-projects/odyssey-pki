@@ -163,12 +163,6 @@ public class CertificateBuilder {
                 case CRL_SIGN:
                     keyUsage |= KeyUsage.cRLSign;
                     break;
-                case ENCIPHER_ONLY:
-                    keyUsage |= KeyUsage.encipherOnly;
-                    break;
-                case DECIPHER_ONLY:
-                    keyUsage |= KeyUsage.decipherOnly;
-                    break;
             }
         }
         return keyUsage;

@@ -19,12 +19,12 @@ import java.util.Map;
 @Setter
 @AllArgsConstructor
 public class CertificateDTO {
-    private String serialNumber;
-    private String parentSerialNumber;
+    private String alias;
+    private String parentAlias;
     private Map<String, String> issuer;
     private Map<String, String> subject;
-    private PublicKey publicKey;
     private Validity validity;
+    private PublicKey publicKey;
     private List<Extension> extensions;
     private Signature signature;
 

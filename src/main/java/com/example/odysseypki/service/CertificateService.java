@@ -164,7 +164,7 @@ public class CertificateService {
         return certificateRepository.find(alias);
     }
 
-    public List<X509Certificate> findAll() throws IOException, GeneralSecurityException {
+    public Map<String, X509Certificate> findAll() throws IOException, GeneralSecurityException {
         return certificateRepository.findAll();
     }
 
@@ -203,8 +203,9 @@ public class CertificateService {
         }
     }
 
+    // TODO findByUID
     public X509Certificate findByCommonName(String commonName) throws GeneralSecurityException, IOException {
-        for (var c : findAll())
+        for (var c : findAll().values())
             if (c.getSubjectX500Principal().getName().toLowerCase().contains(commonName))
                 return c;
         return null;

@@ -4,6 +4,7 @@ import com.example.odysseypki.dto.CertificateCreationDTO;
 import com.example.odysseypki.dto.CertificateDTO;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.service.CertificateService;
+import com.example.odysseypki.service.X500NameFormatter;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +29,11 @@ public class CertificateController {
     private CertificateService service;
 
     @GetMapping
-    public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException, ClassNotFoundException {
+    public ResponseEntity<?> findAll() throws GeneralSecurityException, IOException {
         var certificates = new ArrayList<CertificateDTO>();
 
-        for (var certificate : service.findAll())
-            certificates.add(mapCertificateToDTO(certificate));
+        for (var entry : service.findAll().entrySet())
+            certificates.add(mapCertificateToDTO(entry.getKey(), entry.getValue()));
 
         return new ResponseEntity<>(certificates, HttpStatus.OK);
     }
@@ -44,7 +45,7 @@ public class CertificateController {
         if (certificate == null)
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
-        return new ResponseEntity<>(mapCertificateToDTO(certificate), HttpStatus.OK);
+        return new ResponseEntity<>(mapCertificateToDTO(alias, certificate), HttpStatus.OK);
     }
 
     @GetMapping(value = "/download/{name}/{surname}", produces = "application/x-x509-ca-cert")
@@ -93,7 +94,7 @@ public class CertificateController {
                     new HashMap<>(), false
             );
         }
-        return new ResponseEntity<>(mapCertificateToDTO(created.getX509Certificate()), HttpStatus.CREATED);
+        return new ResponseEntity<>(mapCertificateToDTO(created.getAlias(), created.getX509Certificate()), HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{alias}")
@@ -101,49 +102,21 @@ public class CertificateController {
         var certificates = new ArrayList<CertificateDTO>();
 
         for (var certificate : service.delete(alias))
-            certificates.add(mapCertificateToDTO(certificate));
+            certificates.add(mapCertificateToDTO(alias, certificate));
 
         return new ResponseEntity<>(certificates, HttpStatus.OK);
     }
 
-    private CertificateDTO mapCertificateToDTO(X509Certificate certificate) throws IOException, CertificateEncodingException {
-        var alias = certificate.getSerialNumber().toString();
-        var dto = new CertificateDTO(
+    private CertificateDTO mapCertificateToDTO(String alias, X509Certificate certificate) throws IOException, CertificateEncodingException {
+        return new CertificateDTO(
                 alias,
                 service.findParentAlias(alias),
-                mapX500Principal(certificate.getIssuerX500Principal()),
-                mapX500Principal(certificate.getSubjectX500Principal()),
-                new CertificateDTO.PublicKey(certificate),
+                X500NameFormatter.principalToMap(certificate.getIssuerX500Principal()),
+                X500NameFormatter.principalToMap(certificate.getSubjectX500Principal()),
                 new CertificateDTO.Validity(certificate),
+                new CertificateDTO.PublicKey(certificate),
                 ExtensionMapper.readExtensions(certificate),
                 new CertificateDTO.Signature(certificate)
         );
-
-        // TODO please fix this hack (additional table in database)
-        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("localhost")) {
-            dto.setSerialNumber(CertificateService.HTTPS_ALIAS);
-            dto.setParentSerialNumber("middle");
-        }
-        if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Odyssey PKI Middle")) {
-            dto.setSerialNumber("middle");
-            dto.setParentSerialNumber(CertificateService.ROOT_ALIAS);
-        }
-        else if (dto.getParentSerialNumber() == null && dto.getSubject().get("CN").equals("Odyssey PKI Root"))
-            dto.setSerialNumber(CertificateService.ROOT_ALIAS);
-        return dto;
-    }
-
-    private static Map<String, String> mapX500Principal(X500Principal principal) {
-        var map = new HashMap<String, String>();
-        var parts = principal.getName().split(",");
-        var dns = List.of("CN", "E", "UID");
-
-        for (String part : parts) {
-            var tokens = part.trim().split("=");
-            if (dns.contains(tokens[0]))
-                map.put(tokens[0], tokens[1]);
-        }
-
-        return map;
     }
 }
