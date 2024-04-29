@@ -5,16 +5,12 @@ import com.example.odysseypki.dto.CertificateDTO;
 import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.service.CertificateService;
 import com.example.odysseypki.service.X500NameFormatter;
-import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateEncodingException;
@@ -48,12 +44,10 @@ public class CertificateController {
         return new ResponseEntity<>(mapCertificateToDTO(alias, certificate), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/download/{name}/{surname}", produces = "application/x-x509-ca-cert")
-    public ResponseEntity<byte[]> findByCommonName(@PathVariable String name, @PathVariable String surname) {
+    @GetMapping(value = "/download/{uid}", produces = "application/x-x509-ca-cert")
+    public ResponseEntity<byte[]> downloadByUid(@PathVariable Long uid) {
         try {
-            var certificate = service.findByCommonName(
-                    name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
-            );
+            var certificate = service.findByUid(uid);
 
             if (certificate == null)
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -68,32 +62,25 @@ public class CertificateController {
         }
     }
 
-    @GetMapping("/has/{name}/{surname}")
-    public ResponseEntity<?> hasCertificate(@PathVariable String name, @PathVariable String surname) throws GeneralSecurityException, IOException {
-        // TODO check by using database
-        var certificate = service.findByCommonName(
-                name.trim().toLowerCase() + " " + surname.trim().toLowerCase()
-        );
+    @GetMapping("/has/{uid}")
+    public ResponseEntity<?> hasCertificateByUid(@PathVariable Long uid) throws GeneralSecurityException, IOException {
+        var certificate = service.findByUid(uid);
         return new ResponseEntity<>(certificate != null, HttpStatus.OK);
     }
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CertificateCreationDTO dto) throws GeneralSecurityException,
             IOException, OperatorCreationException {
+
         Certificate created;
-        // TODO make it work
-        if (dto.getIsHttps() != null && dto.getIsHttps()) {
-            created = service.createHttpsCertificate(
-                    dto.getParentAlias(), dto.getCommonName(),
-                    new Date(dto.getStartDate()), new Date(dto.getEndDate())
-            );
-        } else {
-            created = service.create(
-                    dto.getParentAlias(), dto.getCommonName(),
-                    new Date(dto.getStartDate()), new Date(dto.getEndDate()),
-                    new HashMap<>(), false
-            );
-        }
+
+        if (dto.getIsCa()) // TODO eventually cleanup
+            created = service.createCaCertificate(dto);
+        else if (dto.getIsHttps())
+            created = service.createHttpsCertificate(dto);
+        else
+            created = service.createEndEntityCertificate(dto);
+
         return new ResponseEntity<>(mapCertificateToDTO(created.getAlias(), created.getX509Certificate()), HttpStatus.CREATED);
     }
 
