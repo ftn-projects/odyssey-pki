@@ -124,7 +124,10 @@ public class CertificateService {
 
         var keyPair = generateKeyPair();
 
-        var subjectName = Map.of("CN", commonName, "UID", uid);
+        var subjectName = new HashMap<>(Map.of("CN", commonName));
+        if (uid != null)
+            subjectName.put("UID", uid);
+
         var issuerName = X500NameFormatter.format(parent.getSubjectX500Principal());
         var certificate = new CertificateBuilder()
                 .withSubject(keyPair.getPublic(), X500NameFormatter.format(subjectName))
