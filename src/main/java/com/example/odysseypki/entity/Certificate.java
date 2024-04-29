@@ -22,22 +22,6 @@ public class Certificate {
     private PrivateKey privateKey;
     private X509Certificate x509Certificate;
 
-    public boolean isValid() {
-        try {
-            x509Certificate.checkValidity();
-            return true;
-        } catch (CertificateNotYetValidException | CertificateExpiredException e) {
-            return false;
-        }
-    }
-
-    public enum Extension {
-        BASIC_CONSTRAINTS,
-        KEY_USAGE,
-        SUBJECT_KEY_IDENTIFIER,
-        AUTHORITY_KEY_IDENTIFIER
-    }
-
     @Getter
     @AllArgsConstructor
     public enum KeyUsageValue {
@@ -47,9 +31,7 @@ public class Certificate {
         DATA_ENCIPHERMENT("Data Encipherment"),
         KEY_AGREEMENT("Key Agreement"),
         CERTIFICATE_SIGN("Certificate Signer"),
-        CRL_SIGN("CRL Signer"),
-        ENCIPHER_ONLY("Encipher Only"),
-        DECIPHER_ONLY("Decipher Only");
+        CRL_SIGN("CRL Signer");
 
         private final String description;
     }

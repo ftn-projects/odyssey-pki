@@ -4,7 +4,7 @@ import com.example.odysseypki.entity.Certificate;
 import com.example.odysseypki.entity.Issuer;
 import com.example.odysseypki.entity.Subject;
 import lombok.NoArgsConstructor;
-import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.CertIOException;
@@ -23,12 +23,12 @@ import java.util.*;
 public class CertificateBuilder {
     private Subject subject = null;
     private Issuer issuer = null;
-    private Date startDate = null;
-    private Date endDate = null;
+    private Date startDate = null, endDate = null;
     private BigInteger serialNumber = null;
     private String alias = null;
     private PrivateKey privateKey = null;
-    private Map<Certificate.Extension, List<String>> extensions = new HashMap<>();
+    private Boolean isRoot = false, isCa = false, isHttps = false;
+    private final List<String> keyUsages = new ArrayList<>(), altNames = new ArrayList<>();
 
     public Certificate build() throws OperatorCreationException, CertificateException, CertIOException {
         // FIELD VALIDATION
@@ -37,7 +37,7 @@ public class CertificateBuilder {
         if (startDate == null) startDate = new Date();
         if (serialNumber == null) serialNumber = generateSerialNumber();
         if (alias == null) alias = serialNumber.toString();
-        if (privateKey == null) privateKey = issuer.getPrivateKey();
+        if (!isHttps) privateKey = issuer.getPrivateKey();
 
         // BUILDER SETUP
         var builder = new JcaX509v3CertificateBuilder(
@@ -47,8 +47,7 @@ public class CertificateBuilder {
                 subject.getPublicKey());
 
         // ADDING EXTENSIONS
-        for (var entry : extensions.entrySet())
-            buildExtension(builder, entry.getKey(), entry.getValue());
+        buildExtensions(builder);
 
         var signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption")
                 .setProvider("BC").build(issuer.getPrivateKey());
@@ -103,29 +102,53 @@ public class CertificateBuilder {
         return this;
     }
 
-    public CertificateBuilder withExtensions(Map<Certificate.Extension, List<String>> extensions) {
-        this.extensions = extensions;
+    public CertificateBuilder setRootCertificate(Boolean b) {
+        this.isRoot = b;
+        this.isCa = b;
         return this;
     }
 
-    private void buildExtension(JcaX509v3CertificateBuilder builder, Certificate.Extension extension, List<String> values) throws CertIOException {
-        switch (extension) {
-            case BASIC_CONSTRAINTS:
-                builder.addExtension(Extension.basicConstraints, true,
-                        new BasicConstraints(values.get(0).equalsIgnoreCase("true")));
-                return;
-            case KEY_USAGE:
-                builder.addExtension(Extension.keyUsage, true,
-                        new KeyUsage(mapKeyUsage(values)));
-                return;
-            case SUBJECT_KEY_IDENTIFIER:
-                builder.addExtension(Extension.subjectKeyIdentifier, false,
-                        new SubjectKeyIdentifier(subject.getPublicKey().getEncoded()));
-                return;
-            case AUTHORITY_KEY_IDENTIFIER:
-                builder.addExtension(Extension.authorityKeyIdentifier, false,
-                        new AuthorityKeyIdentifier(issuer.getPublicKey().getEncoded()));
-        }
+    public CertificateBuilder setCaCertificate(boolean b) {
+        this.isCa = b;
+        return this;
+    }
+
+    public CertificateBuilder setHttpsCertificate(Boolean b) {
+        this.isHttps = b;
+        return this;
+    }
+
+    public CertificateBuilder withKeyUsages(List<String> keyUsages) {
+        this.keyUsages.addAll(keyUsages);
+        return this;
+    }
+
+    public CertificateBuilder withAltNames(List<String> altNames) {
+        this.altNames.addAll(altNames);
+        return this;
+    }
+
+    private void buildExtensions(JcaX509v3CertificateBuilder builder) throws CertIOException {
+        builder.addExtension(Extension.basicConstraints, true,
+                new BasicConstraints(isCa));
+
+        builder.addExtension(Extension.keyUsage, true,
+                new KeyUsage(mapKeyUsage(keyUsages)));
+
+        builder.addExtension(Extension.subjectKeyIdentifier, false,
+                new SubjectKeyIdentifier(subject.getPublicKey().getEncoded()));
+
+        if (!isRoot)
+            builder.addExtension(Extension.authorityKeyIdentifier, false,
+                    new AuthorityKeyIdentifier(issuer.getPublicKey().getEncoded()));
+
+        var names = new GeneralName[altNames.size()];
+        var flag = isHttps ? GeneralName.dNSName : GeneralName.rfc822Name;
+        for (int i = 0; i < altNames.size(); ++i)
+            names[i] = new GeneralName(flag, altNames.get(i));
+        if (names.length > 0)
+            builder.addExtension(Extension.subjectAlternativeName, false,
+                    new DERSequence(names));
     }
 
     private int mapKeyUsage(List<String> values) {
@@ -136,28 +159,34 @@ public class CertificateBuilder {
                     keyUsage |= KeyUsage.digitalSignature;
                     break;
                 case NON_REPUDIATION:
+                    if (isHttps)
+                        throw new IllegalArgumentException("Non-repudiation is not allowed for HTTPS certificates");
                     keyUsage |= KeyUsage.nonRepudiation;
                     break;
                 case KEY_ENCIPHERMENT:
+                    if (isCa)
+                        throw new IllegalArgumentException("Key encipherment is not allowed for CA certificates");
                     keyUsage |= KeyUsage.keyEncipherment;
                     break;
                 case DATA_ENCIPHERMENT:
+                    if (isCa || isHttps)
+                        throw new IllegalArgumentException("Data encipherment is not allowed for CA or HTTPS certificates");
                     keyUsage |= KeyUsage.dataEncipherment;
                     break;
                 case KEY_AGREEMENT:
+                    if (isCa)
+                        throw new IllegalArgumentException("Key agreement is not allowed for CA certificates");
                     keyUsage |= KeyUsage.keyAgreement;
                     break;
                 case CERTIFICATE_SIGN:
+                    if (!isCa)
+                        throw new IllegalArgumentException("Certificate signing is only allowed for CA certificates");
                     keyUsage |= KeyUsage.keyCertSign;
                     break;
                 case CRL_SIGN:
+                    if (!isCa)
+                        throw new IllegalArgumentException("CRL signing is only allowed for CA certificates");
                     keyUsage |= KeyUsage.cRLSign;
-                    break;
-                case ENCIPHER_ONLY:
-                    keyUsage |= KeyUsage.encipherOnly;
-                    break;
-                case DECIPHER_ONLY:
-                    keyUsage |= KeyUsage.decipherOnly;
                     break;
             }
         }

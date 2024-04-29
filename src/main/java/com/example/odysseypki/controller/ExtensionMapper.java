@@ -71,12 +71,4 @@ public class ExtensionMapper {
         if (ku.hasUsages(KeyUsage.decipherOnly)) values.add("Decipher Only");
         return values;
     }
-
-    private static String mapKeyIdentifier(byte[] keyIdentifier) {
-        var sb = new StringBuilder();
-        for (byte b : keyIdentifier) {
-            sb.append(String.format("%02X", b));
-        }
-        return sb.toString();
-    }
 }

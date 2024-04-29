@@ -13,9 +13,7 @@ import java.io.IOException;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class KeyStoreRepository {
@@ -54,11 +52,11 @@ public class KeyStoreRepository {
         return null;
     }
 
-    public List<X509Certificate> loadAll(List<String> aliases) throws IOException, CertificateException, KeyStoreException {
-        var certificates = new ArrayList<X509Certificate>();
+    public Map<String, X509Certificate> loadAll(List<String> aliases) throws IOException, CertificateException, KeyStoreException {
+        var certificates = new HashMap<String, X509Certificate>();
 
         for (var a : aliases)
-            certificates.add(load(a));
+            certificates.put(a, load(a));
 
         return certificates;
     }

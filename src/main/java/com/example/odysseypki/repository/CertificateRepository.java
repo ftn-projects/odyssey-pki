@@ -12,6 +12,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class CertificateRepository {
@@ -42,7 +43,7 @@ public class CertificateRepository {
         return keyStoreRepository.load(alias);
     }
 
-    public List<X509Certificate> findAll() throws IOException, GeneralSecurityException {
+    public Map<String, X509Certificate> findAll() throws IOException, GeneralSecurityException {
         var tree = CertificateTree.deserialize(ALIAS_TREE_PATH);
         return keyStoreRepository.loadAll(tree.getAllAliases());
     }

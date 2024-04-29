@@ -20,13 +20,13 @@ public class RequestService {
             .orElseThrow(() -> new RuntimeException("There is no request with such id."));
     }
 
-    public Request create(String commonName, String email, String uid, LocalDateTime date) {
-        Request request = new Request(null, commonName, email, uid, date, Request.Status.PENDING);
+    public Request create(String commonName, String email, String uid) {
+        var request = new Request(null, commonName, email, uid, LocalDateTime.now(), Request.Status.PENDING);
         return requestRepository.save(request);
     }
 
     public Request accept(Long id) {
-        Request request = findById(id);
+        var request = findById(id);
         if (request.getStatus().equals(Request.Status.PENDING)) {
             request.setStatus(Request.Status.ACCEPTED);
             requestRepository.save(request);
@@ -35,7 +35,7 @@ public class RequestService {
     }
 
     public Request decline(Long id) {
-        Request request = findById(id);
+        var request = findById(id);
         if (request.getStatus().equals(Request.Status.PENDING)) {
             request.setStatus(Request.Status.DECLINED);
             requestRepository.save(request);
